@@ -1,6 +1,7 @@
 {
   "version": 2,
-  "public": "frontend",
+  "buildCommand": "npm install",
+  "outputDirectory": "frontend",
   "functions": {
     "api/**/*.js": {
       "runtime": "nodejs18.x"
@@ -9,5 +10,11 @@
   "env": {
     "ANTHROPIC_API_KEY": "@anthropic_api_key",
     "DATABASE_URL": "@database_url"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/api/:path*"
+    }
+  ]
 }
