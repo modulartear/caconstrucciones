@@ -402,21 +402,18 @@ function MaterialTester() {
     if (!aiPrompt.trim()) return;
     setAiLoading(true);
     setAiResp('');
-    const list = materials
-      .map((m) => `• ${m.name} (${m.category}, tono ${m.color}) — $${m.price.toLocaleString('es-AR')}/${m.unit}`)
-      .join('\n');
-    const prompt = `Sos un asesor de diseño de interiores de CA Construcciones. El cliente describe su espacio así:
-"${aiPrompt}"
-
-Catálogo disponible:
-${list}
-
-Recomendá 3 materiales del catálogo que combinen bien en ese espacio. Por cada uno: 1 línea con el nombre y 1 línea explicando por qué encaja (color, estilo, función). Respondé en español, claro y directo, máximo 110 palabras totales. No inventes materiales fuera del catálogo.`;
     try {
-      const text = await window.claude.complete(prompt);
-      setAiResp(text || 'No se recibió respuesta. Probá de nuevo.');
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: aiPrompt })
+      });
+      if (!response.ok) throw new Error(response.statusText);
+      const data = await response.json();
+      setAiResp(data.response || 'Sin respuesta');
     } catch (e) {
-      setAiResp('No pudimos consultar al asesor IA en este momento. Volvé a intentar en unos segundos.');
+      console.error('Error:', e);
+      setAiResp('Error al conectar con IA. Intenta de nuevo.');
     }
     setAiLoading(false);
   };

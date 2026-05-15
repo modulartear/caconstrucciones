@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mv *.html *.jsx *.js *.css frontend/)",
+      "Bash(mv assets *)",
+      "Bash(npm install *)",
+      "Bash(git commit -m ' *)",
+      "Bash(node init-db.js)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit -m 'Actualizar VERCEL_SETUP.md sin keys sensibles *)",
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(mv *.html *.jsx *.js *.css assets uploads frontend/ 2>/dev/null; ls frontend/ | head -10)"
+    ]
+  }
+}
