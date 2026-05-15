@@ -1,4 +1,22 @@
 {
   "version": 2,
-  "public": false
+  "outputDirectory": "frontend",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*\\.jsx?)$",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*\\.css)$",
+      "dest": "/$1"
+    },
+    {
+      "src": "/.*",
+      "dest": "/index.html"
+    }
+  ]
 }
