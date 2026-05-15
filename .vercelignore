@@ -1,0 +1,9 @@
+.git
+.env
+.env.example
+init-db.js
+backend/.env
+node_modules
+package-lock.json
+README.md
+VERCEL_SETUP.md
