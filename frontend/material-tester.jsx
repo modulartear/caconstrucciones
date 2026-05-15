@@ -195,6 +195,128 @@ function ProceduralSwatch({ material, size = 200, className = '' }) {
   return <canvas ref={ref} className={className} />;
 }
 
+// ───────────────────────── Wall Detection ─────────────────────────
+
+function detectWalls(img, width, height) {
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = width;
+  tempCanvas.height = height;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.drawImage(img, 0, 0, width, height);
+
+  const imgData = tempCtx.getImageData(0, 0, width, height);
+  const data = imgData.data;
+
+  // Crear máscara: 1 = pared, 0 = no pared
+  const mask = new Uint8Array(width * height);
+
+  // Analizar uniformidad de color - áreas uniformes son típicamente paredes
+  const blockSize = 12;
+  for (let by = 0; by < height; by += blockSize) {
+    for (let bx = 0; bx < width; bx += blockSize) {
+      const bh = Math.min(blockSize, height - by);
+      const bw = Math.min(blockSize, width - bx);
+
+      let r = 0, g = 0, b = 0, count = 0;
+      for (let y = by; y < by + bh; y++) {
+        for (let x = bx; x < bx + bw; x++) {
+          const idx = (y * width + x) * 4;
+          r += data[idx];
+          g += data[idx + 1];
+          b += data[idx + 2];
+          count++;
+        }
+      }
+      r /= count; g /= count; b /= count;
+
+      // Varianza de colores
+      let variance = 0;
+      for (let y = by; y < by + bh; y++) {
+        for (let x = bx; x < bx + bw; x++) {
+          const idx = (y * width + x) * 4;
+          variance += Math.pow(data[idx] - r, 2) + Math.pow(data[idx + 1] - g, 2) + Math.pow(data[idx + 2] - b, 2);
+        }
+      }
+      variance /= count;
+
+      // Baja varianza = color uniforme = probablemente pared
+      const isWall = variance < 400 && (r + g + b) / 3 > 70;
+      const blockValue = isWall ? 1 : 0;
+
+      for (let y = by; y < by + bh; y++) {
+        for (let x = bx; x < bx + bw; x++) {
+          mask[y * width + x] = blockValue;
+        }
+      }
+    }
+  }
+
+  // Dilatación + erosión para suavizar y conectar áreas
+  const dilate = (arr, times = 2) => {
+    let result = new Uint8Array(arr);
+    for (let t = 0; t < times; t++) {
+      const temp = new Uint8Array(result);
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = y * width + x;
+          const neighbors = [
+            result[(y - 1) * width + x],
+            result[(y + 1) * width + x],
+            result[y * width + (x - 1)],
+            result[y * width + (x + 1)]
+          ];
+          if (neighbors.some(n => n)) temp[idx] = 1;
+        }
+      }
+      result = temp;
+    }
+    return result;
+  };
+
+  const erode = (arr, times = 1) => {
+    let result = new Uint8Array(arr);
+    for (let t = 0; t < times; t++) {
+      const temp = new Uint8Array(result);
+      for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+          const idx = y * width + x;
+          const neighbors = [
+            result[(y - 1) * width + x],
+            result[(y + 1) * width + x],
+            result[y * width + (x - 1)],
+            result[y * width + (x + 1)],
+            result[idx]
+          ];
+          if (!neighbors.every(n => n)) temp[idx] = 0;
+        }
+      }
+      result = temp;
+    }
+    return result;
+  };
+
+  let processed = dilate(mask, 2);
+  processed = erode(processed, 1);
+
+  // Convertir a canvas blanco/negro para la máscara
+  const wallCanvas = document.createElement('canvas');
+  wallCanvas.width = width;
+  wallCanvas.height = height;
+  const wallCtx = wallCanvas.getContext('2d');
+  const wallImgData = wallCtx.createImageData(width, height);
+
+  for (let i = 0; i < width * height; i++) {
+    const idx = i * 4;
+    const val = processed[i] ? 255 : 0;
+    wallImgData.data[idx] = val;
+    wallImgData.data[idx + 1] = val;
+    wallImgData.data[idx + 2] = val;
+    wallImgData.data[idx + 3] = 255;
+  }
+  wallCtx.putImageData(wallImgData, 0, 0);
+  return wallCanvas;
+}
+
 // ───────────────────────── MaterialTester (main) ─────────────────────────
 
 function MaterialTester() {
@@ -206,9 +328,6 @@ function MaterialTester() {
   const [intensity, setIntensity] = useState(0.78);
   const [comparing, setComparing] = useState(false);
   const [dragging, setDragging] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [aiResp, setAiResp] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
 
   const canvasRef = useRef(null);
   const maskRef = useRef(null);
@@ -301,7 +420,14 @@ function MaterialTester() {
         canvasRef.current.height = h;
         maskRef.current.width = w;
         maskRef.current.height = h;
-        maskRef.current.getContext('2d').clearRect(0, 0, w, h);
+
+        // Detectar paredes automáticamente
+        const wallCanvas = detectWalls(img, w, h);
+        const wallCtx = wallCanvas.getContext('2d');
+        const wallData = wallCtx.getImageData(0, 0, w, h);
+        const maskCtx = maskRef.current.getContext('2d');
+        maskCtx.putImageData(wallData, 0, 0);
+
         setPhoto(img);
       };
       img.src = e.target.result;
@@ -328,10 +454,14 @@ function MaterialTester() {
       canvasRef.current.height = h;
       maskRef.current.width = w;
       maskRef.current.height = h;
-      const mctx = maskRef.current.getContext('2d');
-      mctx.clearRect(0, 0, w, h);
-      mctx.fillStyle = '#fff';
-      mctx.fillRect(w * 0.08, h * 0.05, w * 0.84, h * 0.55);
+
+      // Detectar paredes automáticamente
+      const wallCanvas = detectWalls(img, w, h);
+      const wallCtx = wallCanvas.getContext('2d');
+      const wallData = wallCtx.getImageData(0, 0, w, h);
+      const maskCtx = maskRef.current.getContext('2d');
+      maskCtx.putImageData(wallData, 0, 0);
+
       setPhoto(img);
     };
     img.src = 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1400&q=80';
@@ -408,36 +538,16 @@ function MaterialTester() {
     a.click();
   };
 
-  const askAI = async () => {
-    if (!aiPrompt.trim()) return;
-    setAiLoading(true);
-    setAiResp('');
-    try {
-      const response = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: aiPrompt })
-      });
-      if (!response.ok) throw new Error(response.statusText);
-      const data = await response.json();
-      setAiResp(data.response || 'Sin respuesta');
-    } catch (e) {
-      console.error('Error:', e);
-      setAiResp('Error al conectar con IA. Intenta de nuevo.');
-    }
-    setAiLoading(false);
-  };
 
   return (
     <div className="tester">
       <div className="tester-header">
         <div>
-          <h3>Probador de Materiales con IA</h3>
+          <h3>Probador de Materiales</h3>
           <p style={{ color: 'var(--muted)', fontSize: 14, margin: '6px 0 0' }}>
-            Subí una foto de tu obra y simulá cómo quedan nuestros materiales antes de decidir.
+            Subí una foto y simulá cómo lucen nuestros materiales en las paredes de tu espacio.
           </p>
         </div>
-        <div className="ai-pill"><span className="dot"></span>Powered by Claude AI</div>
       </div>
 
       <div className="tester-body">
@@ -466,7 +576,7 @@ function MaterialTester() {
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
               <h4>Subí una foto de tu espacio</h4>
-              <p>Arrastrá una imagen acá o elegí un archivo. Después pintá sobre la pared, piso o mueble para probar materiales.</p>
+              <p>Detectamos automáticamente las paredes. Seleccioná un material de la lista para verlo aplicado en tus paredes.</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <label className="btn btn-primary" style={{ cursor: 'pointer' }}>
                   Elegir archivo
@@ -512,14 +622,13 @@ function MaterialTester() {
             <div className="tester-tools">
               <button className={`tool-btn ${mode === 'paint' ? 'active' : ''}`} onClick={() => setMode('paint')} disabled={!photo}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><circle cx="6" cy="6" r="2"/></svg>
-                Pintar
+                Agregar
               </button>
               <button className={`tool-btn ${mode === 'erase' ? 'active' : ''}`} onClick={() => setMode('erase')} disabled={!photo}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 20H7L3 16a2 2 0 0 1 0-2.8L13.2 3 21 10.8a2 2 0 0 1 0 2.8L14 21"/></svg>
-                Borrar
+                Remover
               </button>
-              <button className="tool-btn" onClick={fillAll} disabled={!photo}>Pintar todo</button>
-              <button className="tool-btn" onClick={resetMask} disabled={!photo}>Limpiar</button>
+              <button className="tool-btn" onClick={resetMask} disabled={!photo}>Re-detectar</button>
             </div>
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Tamaño del pincel: <b style={{ color: 'var(--text)' }}>{brushSize}px</b></div>
@@ -532,25 +641,6 @@ function MaterialTester() {
               <button className="tool-btn" onClick={download} disabled={!photo}>Descargar</button>
               <label className="tool-btn" style={{ cursor: 'pointer' }}>Cambiar foto<input type="file" accept="image/*" hidden onChange={(e) => loadPhoto(e.target.files?.[0])} /></label>
             </div>
-          </div>
-
-          <div className="ai-suggest">
-            <h4>🤖 Asesor IA</h4>
-            <p>Contanos sobre tu espacio y te recomendamos materiales del catálogo.</p>
-            <textarea
-              placeholder="Ej: Living de 30m² con mucha luz natural, busco un estilo cálido moderno…"
-              value={aiPrompt}
-              onChange={(e) => setAiPrompt(e.target.value)}
-            />
-            <button
-              className="btn btn-primary btn-sm"
-              style={{ marginTop: 10, width: '100%', justifyContent: 'center' }}
-              onClick={askAI}
-              disabled={aiLoading || !aiPrompt.trim()}
-            >
-              {aiLoading ? 'Analizando con IA…' : 'Pedir recomendación'}
-            </button>
-            {aiResp && <div className="ai-output">{aiResp}</div>}
           </div>
         </div>
       </div>
