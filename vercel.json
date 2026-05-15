@@ -2,11 +2,6 @@
   "version": 2,
   "buildCommand": "echo 'Static site'",
   "outputDirectory": "frontend",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "routes": [
     {
       "src": "/api/(.*)",
