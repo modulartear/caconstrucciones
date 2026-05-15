@@ -216,6 +216,9 @@ function MaterialTester() {
   const drawing = useRef(false);
   const lastPt = useRef(null);
 
+  if (!canvasRef.current && typeof document !== 'undefined') {
+    canvasRef.current = document.createElement('canvas');
+  }
   if (!maskRef.current) maskRef.current = document.createElement('canvas');
   if (!patternRef.current) patternRef.current = document.createElement('canvas');
 
