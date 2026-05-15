@@ -283,6 +283,10 @@ function MaterialTester() {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
+        if (!canvasRef.current || !maskRef.current) {
+          console.error('Canvas refs not ready');
+          return;
+        }
         const maxW = 920;
         const maxH = 620;
         let w = img.width;
@@ -306,6 +310,10 @@ function MaterialTester() {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
+      if (!canvasRef.current || !maskRef.current) {
+        console.error('Canvas refs not ready');
+        return;
+      }
       const maxW = 920;
       const maxH = 620;
       let w = img.width;
@@ -319,7 +327,6 @@ function MaterialTester() {
       maskRef.current.height = h;
       const mctx = maskRef.current.getContext('2d');
       mctx.clearRect(0, 0, w, h);
-      // auto-paint a "wall" region (upper portion, excluding edges) so the user sees the effect instantly
       mctx.fillStyle = '#fff';
       mctx.fillRect(w * 0.08, h * 0.05, w * 0.84, h * 0.55);
       setPhoto(img);
