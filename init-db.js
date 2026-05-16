@@ -14,9 +14,18 @@ async function init() {
   console.log('🔄 Inicializando BD...\n');
 
   try {
+    // Drop old tables if they exist
+    await pool.query('DROP TABLE IF EXISTS materials CASCADE');
+    await pool.query('DROP TABLE IF EXISTS projects CASCADE');
+    await pool.query('DROP TABLE IF EXISTS budgets CASCADE');
+    await pool.query('DROP TABLE IF EXISTS clients CASCADE');
+    await pool.query('DROP TABLE IF EXISTS testimonials CASCADE');
+    await pool.query('DROP TABLE IF EXISTS brands CASCADE');
+    console.log('✅ Tablas antiguas eliminadas');
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS materials (
-        id SERIAL PRIMARY KEY,
+        id TEXT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         category VARCHAR(100),
         texture VARCHAR(50),
@@ -25,10 +34,80 @@ async function init() {
         price DECIMAL(10,2),
         unit VARCHAR(20),
         photo TEXT,
+        description TEXT,
+        stock INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
     console.log('✅ Tabla materials');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        location VARCHAR(255),
+        status VARCHAR(20),
+        surface INT,
+        year INT,
+        description TEXT,
+        cover TEXT,
+        gallery TEXT[],
+        progress INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tabla projects');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS budgets (
+        id TEXT PRIMARY KEY,
+        client VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        phone VARCHAR(20),
+        type VARCHAR(100),
+        surface INT,
+        message TEXT,
+        status VARCHAR(20) DEFAULT 'nuevo',
+        date VARCHAR(10),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tabla budgets');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS clients (
+        id TEXT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255),
+        phone VARCHAR(20),
+        project VARCHAR(255),
+        since VARCHAR(10),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tabla clients');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS testimonials (
+        id TEXT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        role VARCHAR(255),
+        stars INT DEFAULT 5,
+        text TEXT,
+        avatar VARCHAR(10),
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tabla testimonials');
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS brands (
+        id TEXT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tabla brands');
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS contacts (
@@ -41,22 +120,6 @@ async function init() {
     `);
     console.log('✅ Tabla contacts');
 
-    const materials = [
-      { name: 'Mármol Blanco Carrara', category: 'Revestimientos', texture: 'marble', color: '#FFFFFF', accent: '#CCCCCC', price: 850, unit: 'm²' },
-      { name: 'Ladrillo Visto', category: 'Revestimientos', texture: 'brick', color: '#C41E3A', accent: '#8B0000', price: 180, unit: 'm²' },
-      { name: 'Cemento Alisado', category: 'Pisos', texture: 'cement', color: '#8B8680', accent: '#696969', price: 350, unit: 'm²' },
-      { name: 'Travertino Crema', category: 'Revestimientos', texture: 'stone', color: '#D2B48C', accent: '#A0826D', price: 620, unit: 'm²' },
-      { name: 'Pintura Acrílica Blanca', category: 'Pintura', texture: 'paint', color: '#F8F8F8', accent: '#E8E8E8', price: 45, unit: 'L' }
-    ];
-
-    for (const mat of materials) {
-      await pool.query(
-        `INSERT INTO materials (name, category, texture, color, accent, price, unit)
-         VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT DO NOTHING`,
-        [mat.name, mat.category, mat.texture, mat.color, mat.accent, mat.price, mat.unit]
-      );
-    }
-    console.log('✅ 5 materiales agregados');
     console.log('\n🎉 BD lista!\n');
     process.exit(0);
   } catch (e) {

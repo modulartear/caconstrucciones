@@ -1,9 +1,8 @@
 import { query } from '../backend/db.js';
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -13,23 +12,23 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      const result = await query('SELECT * FROM materials ORDER BY id');
+      const result = await query('SELECT * FROM budgets ORDER BY date DESC');
       return res.status(200).json(result.rows);
     }
 
     if (req.method === 'POST') {
-      const { id, name, category, texture, color, accent, price, unit, photo, description, stock } = req.body;
+      const { id, client, email, phone, type, surface, message, status, date } = req.body;
 
-      if (!name) {
-        return res.status(400).json({ error: 'Material name is required' });
+      if (!client) {
+        return res.status(400).json({ error: 'Client name is required' });
       }
 
       const result = await query(
-        `INSERT INTO materials (id, name, category, texture, color, accent, price, unit, photo, description, stock)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         ON CONFLICT (id) DO UPDATE SET name=$2, category=$3, texture=$4, color=$5, accent=$6, price=$7, unit=$8, photo=$9, description=$10, stock=$11
+        `INSERT INTO budgets (id, client, email, phone, type, surface, message, status, date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (id) DO UPDATE SET client=$2, email=$3, phone=$4, type=$5, surface=$6, message=$7, status=$8, date=$9
          RETURNING *`,
-        [id, name, category, texture, color, accent, price, unit, photo, description, stock || 0]
+        [id, client, email, phone, type, surface, message, status || 'nuevo', date]
       );
 
       return res.status(201).json(result.rows[0]);
@@ -40,7 +39,7 @@ export default async function handler(req, res) {
       if (!id) {
         return res.status(400).json({ error: 'ID is required' });
       }
-      await query('DELETE FROM materials WHERE id = $1', [id]);
+      await query('DELETE FROM budgets WHERE id = $1', [id]);
       return res.status(200).json({ success: true });
     }
 

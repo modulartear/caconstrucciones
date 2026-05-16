@@ -275,21 +275,16 @@ function MaterialesPage({ toast }) {
     (m.name.toLowerCase().includes(search.toLowerCase()) || m.category.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const save = (mat) => {
-    let next;
-    if (mat.id) {
-      next = materials.map((m) => (m.id === mat.id ? mat : m));
-      toast('Material actualizado');
-    } else {
+  const save = async (mat) => {
+    if (!mat.id) {
       mat.id = window.CAStore.uid('m');
-      next = [mat, ...materials];
-      toast('Material agregado al catálogo');
     }
-    setStore('materials', next);
+    await window.CAStore.saveItem('materials', mat);
+    toast(mat.id.startsWith('m_') || materials.some(m => m.id === mat.id) ? 'Material actualizado' : 'Material agregado al catálogo');
     setEditing(null);
   };
-  const remove = (id) => {
-    setStore('materials', materials.filter((m) => m.id !== id));
+  const remove = async (id) => {
+    await window.CAStore.deleteItem('materials', id);
     toast('Material eliminado');
     setDelTarget(null);
   };
@@ -457,13 +452,19 @@ function ObrasPage({ toast }) {
   const [editing, setEditing] = useState(null);
   const [delTarget, setDelTarget] = useState(null);
 
-  const save = (p) => {
-    let next;
-    if (p.id) { next = projects.map((x) => (x.id === p.id ? p : x)); toast('Obra actualizada'); }
-    else { p.id = window.CAStore.uid('p'); next = [p, ...projects]; toast('Obra agregada'); }
-    setStore('projects', next); setEditing(null);
+  const save = async (p) => {
+    if (!p.id) {
+      p.id = window.CAStore.uid('p');
+    }
+    await window.CAStore.saveItem('projects', p);
+    toast('Obra ' + (p.id.startsWith('p_') || projects.some(x => x.id === p.id) ? 'actualizada' : 'agregada'));
+    setEditing(null);
   };
-  const remove = (id) => { setStore('projects', projects.filter((x) => x.id !== id)); toast('Obra eliminada'); setDelTarget(null); };
+  const remove = async (id) => {
+    await window.CAStore.deleteItem('projects', id);
+    toast('Obra eliminada');
+    setDelTarget(null);
+  };
 
   return (
     <>
@@ -565,12 +566,20 @@ function PresupuestosPage({ toast }) {
 
   const filtered = filter === 'todos' ? budgets : budgets.filter((b) => b.status === filter);
 
-  const updateStatus = (id, status) => {
-    setStore('budgets', budgets.map((b) => (b.id === id ? { ...b, status } : b)));
-    toast('Estado actualizado');
-    if (open && open.id === id) setOpen({ ...open, status });
+  const updateStatus = async (id, status) => {
+    const budget = budgets.find(b => b.id === id);
+    if (budget) {
+      await window.CAStore.saveItem('budgets', { ...budget, status });
+      toast('Estado actualizado');
+      if (open && open.id === id) setOpen({ ...open, status });
+    }
   };
-  const remove = (id) => { setStore('budgets', budgets.filter((b) => b.id !== id)); toast('Presupuesto eliminado'); setDelTarget(null); if (open?.id === id) setOpen(null); };
+  const remove = async (id) => {
+    await window.CAStore.deleteItem('budgets', id);
+    toast('Presupuesto eliminado');
+    setDelTarget(null);
+    if (open?.id === id) setOpen(null);
+  };
 
   return (
     <>
@@ -643,13 +652,19 @@ function SimpleCRUD({ title, sub, storeKey, fields, displayCols, toast }) {
   const [editing, setEditing] = useState(null);
   const [delTarget, setDelTarget] = useState(null);
 
-  const save = (it) => {
-    let next;
-    if (it.id) { next = items.map((x) => (x.id === it.id ? it : x)); toast('Actualizado'); }
-    else { it.id = window.CAStore.uid(storeKey[0]); next = [it, ...items]; toast('Agregado'); }
-    setStore(storeKey, next); setEditing(null);
+  const save = async (it) => {
+    if (!it.id) {
+      it.id = window.CAStore.uid(storeKey[0]);
+    }
+    await window.CAStore.saveItem(storeKey, it);
+    toast('Actualizado');
+    setEditing(null);
   };
-  const remove = (id) => { setStore(storeKey, items.filter((x) => x.id !== id)); toast('Eliminado'); setDelTarget(null); };
+  const remove = async (id) => {
+    await window.CAStore.deleteItem(storeKey, id);
+    toast('Eliminado');
+    setDelTarget(null);
+  };
 
   return (
     <>
