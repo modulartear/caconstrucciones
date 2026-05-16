@@ -141,10 +141,14 @@
     init
   };
 
-  // Auto-init on load
+  // Auto-init on load (non-blocking)
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => init());
+    document.addEventListener('DOMContentLoaded', () => {
+      // Cargar en background sin bloquear renderizado
+      init().catch(e => console.error('Error inicializando store:', e));
+    });
   } else {
-    init();
+    // Ya cargó el DOM, iniciar en background
+    init().catch(e => console.error('Error inicializando store:', e));
   }
 })();
