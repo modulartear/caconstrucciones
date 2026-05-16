@@ -42,12 +42,22 @@
     return loadingPromises[name];
   }
 
+  const DEFAULT_SEEDS = {
+    materials: [],
+    projects: [],
+    testimonials: [],
+    brands: [],
+    budgets: [],
+    clients: [],
+    site: { hero_kicker: '', hero_title: '', hero_sub: '', stats: [], contact: { phone: '', email: '', address: '' } }
+  };
+
   function load(name) {
     try {
       const raw = localStorage.getItem(KEYS[name]);
       if (raw) return JSON.parse(raw);
     } catch (e) {}
-    return [];
+    return DEFAULT_SEEDS[name] || [];
   }
 
   async function save(name, data) {
