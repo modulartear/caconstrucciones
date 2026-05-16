@@ -128,7 +128,7 @@ function Login({ onSuccess }) {
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
       <form className="card" style={{ padding: 36, maxWidth: 420, width: '100%' }} onSubmit={submit}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div className="brand-mark"><img src="assets/logo.jpg" alt="" /></div>
+          <div className="brand-mark"><img src="/assets/logo.jpg" alt="" /></div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700 }}>CA Construcciones</div>
             <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>Panel administrativo</div>
@@ -819,7 +819,7 @@ function App() {
     <div className="admin-shell">
       <aside className="admin-side">
         <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="brand-mark" style={{ width: 36, height: 36 }}><img src="assets/logo.jpg" alt="" /></div>
+          <div className="brand-mark" style={{ width: 36, height: 36 }}><img src="/assets/logo.jpg" alt="" /></div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>CA Construcciones</div>
             <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>Panel admin</div>

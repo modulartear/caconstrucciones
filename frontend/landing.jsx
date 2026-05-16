@@ -50,7 +50,7 @@ function BrandMark({ size = 38 }) {
   return (
     <a href="#top" className="brand">
       <div className="brand-mark" style={{ width: size, height: size }}>
-        <img src="assets/logo.jpg" alt="CA Construcciones" />
+        <img src="/assets/logo.jpg" alt="CA Construcciones" />
       </div>
       <div className="brand-text">
         <span className="top">CA Construcciones</span>
