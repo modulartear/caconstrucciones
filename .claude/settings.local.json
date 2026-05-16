@@ -12,7 +12,8 @@
       "Bash(git push *)",
       "Bash(git reset *)",
       "Bash(mv *.html *.jsx *.js *.css assets uploads frontend/ 2>/dev/null; ls frontend/ | head -10)",
-      "Bash(node migrate-data.js)"
+      "Bash(node migrate-data.js)",
+      "Bash(git commit *)"
     ]
   }
 }
