@@ -57,6 +57,7 @@
       { id: 'c4', name: 'Grupo Inversor Aurea', email: 'gi@aurea.com.ar', phone: '11-7766-1100', project: 'Edificio Mirador', since: '2024-01-22' },
     ],
     site: {
+      logo: null,
       hero_kicker: 'Soluciones integrales en construcción',
       hero_title: 'Construimos lugares\nque importan.',
       hero_sub: 'Más de 15 años desarrollando obras residenciales, comerciales y refacciones premium en Argentina. Diseño, ingeniería y ejecución bajo un mismo equipo.',

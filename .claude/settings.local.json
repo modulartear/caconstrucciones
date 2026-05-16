@@ -11,7 +11,32 @@
       "Bash(git commit -m 'Actualizar VERCEL_SETUP.md sin keys sensibles *)",
       "Bash(git push *)",
       "Bash(git reset *)",
-      "Bash(mv *.html *.jsx *.js *.css assets uploads frontend/ 2>/dev/null; ls frontend/ | head -10)"
+      "Bash(mv *.html *.jsx *.js *.css assets uploads frontend/ 2>/dev/null; ls frontend/ | head -10)",
+      "Bash(git commit -m 'Fix vercel.json schema validation *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git commit -m 'Fix vercel.json - usar builds y routes en lugar de outputDirectory *)",
+      "Bash(git commit -m 'Simplificar vercel.json al mínimo *)",
+      "Bash(git commit -m 'Configurar vercel.json para servir frontend como estático + API functions *)",
+      "Bash(git commit -m 'Remover configuración de runtime - dejar que Vercel lo autodetecte *)",
+      "Bash(git commit -m 'Simplificar vercel.json y agregar .vercelignore *)",
+      "Bash(git commit -m 'Configurar rutas en vercel.json para servir .jsx y .css como archivos reales *)",
+      "Bash(git commit -m 'Agregar validación de canvas refs en loadPhoto y loadDemo *)",
+      "Bash(git commit *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__Claude_in_Chrome__browser_batch",
+      "mcp__Claude_in_Chrome__switch_browser",
+      "mcp__Claude_in_Chrome__navigate",
+      "mcp__Claude_in_Chrome__computer",
+      "mcp__Claude_in_Chrome__tabs_create_mcp",
+      "Bash(curl -s \"https://caconstrucciones.vercel.app/api/materials\")",
+      "Bash(curl -s -X POST https://caconstrucciones.vercel.app/api/ai/recommend -H 'Content-Type: application/json' -d '{\"prompt\":\"Quiero una sala moderna con mucha luz natural, colores claros y materiales elegantes\"}')",
+      "Bash(curl -s \"https://caconstrucciones.vercel.app/api/ai\")",
+      "Bash(curl -s -X POST https://caconstrucciones.vercel.app/api/contact -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"test@example.com\",\"message\":\"Test message\"}')",
+      "Bash(curl -s -X POST https://caconstrucciones.vercel.app/api/auth/login -H 'Content-Type: application/json' -d '{\"username\":\"admin\",\"password\":\"cambiar-en-produccion\"}')",
+      "Bash(curl -s https://caconstrucciones.vercel.app/api/auth -X POST -H \"Content-Type: application/json\" -d '{\"action\":\"login\",\"username\":\"admin\",\"password\":\"cambiar-en-produccion\"}')",
+      "Bash(curl -s https://caconstrucciones.vercel.app/api/auth -X POST -H \"Content-Type: application/json\" -d '{\"action\":\"login\",\"username\":\"admin\",\"password\":\"1234\"}' -w \"\\\\nStatus: %{http_code}\\\\n\")"
     ]
   }
 }

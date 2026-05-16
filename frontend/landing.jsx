@@ -47,10 +47,15 @@ function Toast({ message, onDone }) {
 
 // ───────────────────────── Brand ─────────────────────────
 function BrandMark({ size = 38 }) {
+  const site = useStore('site');
   return (
     <a href="#top" className="brand">
       <div className="brand-mark" style={{ width: size, height: size }}>
-        <img src="/assets/logo.jpg" alt="CA Construcciones" />
+        {site.logo ? (
+          <img src={site.logo} alt="CA Construcciones" />
+        ) : (
+          <img src="/assets/logo.jpg" alt="CA Construcciones" />
+        )}
       </div>
       <div className="brand-text">
         <span className="top">CA Construcciones</span>

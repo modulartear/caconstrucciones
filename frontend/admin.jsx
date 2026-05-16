@@ -128,7 +128,7 @@ function Login({ onSuccess }) {
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
       <form className="card" style={{ padding: 36, maxWidth: 420, width: '100%' }} onSubmit={submit}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <div className="brand-mark"><img src="/assets/logo.jpg" alt="" /></div>
+          <div className="brand-mark"><img src={window.CAStore.get('site')?.logo || '/assets/logo.jpg'} alt="" /></div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 700 }}>CA Construcciones</div>
             <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--muted)' }}>Panel administrativo</div>
@@ -743,6 +743,13 @@ function ConfigPage({ toast }) {
       </div>
 
       <div className="panel" style={{ marginBottom: 18 }}>
+        <div className="panel-head"><h3>Logo</h3></div>
+        <div className="panel-body padded">
+          <PhotoInput value={s.logo} onChange={(photo) => setS({ ...s, logo: photo })} hint="Subí el logo de la empresa" />
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-head"><h3>Hero</h3></div>
         <div className="panel-body padded" style={{ display: 'grid', gap: 14 }}>
           <div><label>Kicker</label><input value={s.hero_kicker} onChange={(e) => setS({ ...s, hero_kicker: e.target.value })} /></div>
@@ -819,7 +826,7 @@ function App() {
     <div className="admin-shell">
       <aside className="admin-side">
         <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="brand-mark" style={{ width: 36, height: 36 }}><img src="/assets/logo.jpg" alt="" /></div>
+          <div className="brand-mark" style={{ width: 36, height: 36 }}><img src={window.CAStore.get('site')?.logo || '/assets/logo.jpg'} alt="" /></div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>CA Construcciones</div>
             <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>Panel admin</div>
