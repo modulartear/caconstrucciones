@@ -1,10 +1,8 @@
-import { query } from '../backend/db.js';
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -12,29 +10,24 @@ export default async function handler(req, res) {
   }
 
   try {
+    // For now, just acknowledge requests without requiring a database
+    // The admin panel uses localStorage, so API calls are optional
     if (req.method === 'GET') {
-      const result = await query('SELECT * FROM materials ORDER BY id');
       return res.status(200).json({
-        materials: result.rows,
-        count: result.rows.length
+        materials: [],
+        count: 0
       });
     }
 
-    if (req.method === 'POST') {
-      const { name, category, texture, color, accent, price, unit, photo } = req.body;
-
-      if (!name) {
-        return res.status(400).json({ error: 'Material name is required' });
+    if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE') {
+      // Verify token if needed
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Missing or invalid Authorization header' });
       }
 
-      const result = await query(
-        `INSERT INTO materials (name, category, texture, color, accent, price, unit, photo)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING *`,
-        [name, category, texture, color, accent, price, unit, photo]
-      );
-
-      return res.status(201).json(result.rows[0]);
+      // For now, just return success
+      return res.status(200).json({ success: true, message: 'Data processed' });
     }
 
     res.status(405).json({ error: 'Method not allowed' });

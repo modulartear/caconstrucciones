@@ -1,5 +1,3 @@
-import { query } from '../backend/db.js';
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
@@ -18,16 +16,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Email and message are required' });
       }
 
-      await query(
-        `INSERT INTO contacts (name, email, message) VALUES ($1, $2, $3)`,
-        [name || 'Anonymous', email, message]
-      );
-
-      return res.status(201).json({ message: 'Message saved' });
+      // For now, just return success without saving to a database
+      // The frontend handles data in localStorage
+      return res.status(201).json({
+        message: 'Message received',
+        data: { name: name || 'Anonymous', email, message }
+      });
     }
 
     res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
+    console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
 }

@@ -16,6 +16,10 @@ function useAuth() {
   };
   return [ok, setOkWrapped];
 }
+function getAuthHeader() {
+  const token = localStorage.getItem('ca_admin_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 function logout() {
   localStorage.removeItem('ca_admin_token');
   window.location.href = 'index.html';
@@ -29,6 +33,7 @@ async function loginWithAPI(username, password) {
     });
     const data = await response.json();
     if (response.ok && data.token) {
+      localStorage.setItem('ca_admin_token', data.token);
       return { success: true };
     }
     return { success: false, error: data.error || 'Login failed' };

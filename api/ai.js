@@ -1,5 +1,4 @@
 import { Anthropic } from '@anthropic-ai/sdk';
-import { query } from '../backend/db.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -26,18 +25,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'API key not configured' });
     }
 
-    let materials = [];
-    try {
-      const result = await query('SELECT * FROM materials ORDER BY id');
-      materials = result.rows;
-    } catch (e) {
-      console.log('DB not available, using demo materials');
-      materials = [
-        { name: 'Mármol Blanco', category: 'Revestimientos', color: '#FFFFFF', price: 850, unit: 'm²' },
-        { name: 'Ladrillo Visto', category: 'Revestimientos', color: '#C41E3A', price: 180, unit: 'm²' },
-        { name: 'Cemento Alisado', category: 'Pisos', color: '#8B8680', price: 350, unit: 'm²' }
-      ];
-    }
+    // Use demo materials (no database required)
+    const materials = [
+      { name: 'Mármol Blanco', category: 'Revestimientos', color: '#FFFFFF', price: 850, unit: 'm²' },
+      { name: 'Ladrillo Visto', category: 'Revestimientos', color: '#C41E3A', price: 180, unit: 'm²' },
+      { name: 'Cemento Alisado', category: 'Pisos', color: '#8B8680', price: 350, unit: 'm²' }
+    ];
 
     const catalog = materials
       .map(m => `• ${m.name} (${m.category}, $${m.price}/${m.unit})`)
