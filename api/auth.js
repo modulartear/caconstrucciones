@@ -18,7 +18,7 @@ export default async function handler(req, res) {
     // Login action
     if (action === 'login') {
       const adminUser = process.env.ADMIN_USERNAME || 'admin';
-      const adminPass = process.env.ADMIN_PASSWORD || 'cambiar-en-produccion';
+      const adminPass = process.env.ADMIN_PASSWORD || '1234';
 
       if (username === adminUser && password === adminPass) {
         return res.status(200).json({
