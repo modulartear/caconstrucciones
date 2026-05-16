@@ -7,15 +7,7 @@
       "dest": "/api/$1"
     },
     {
-      "src": "/(.*\\.html?)$",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*\\.jsx?)$",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*\\.css)$",
+      "src": "/(.*\\.(html?|jsx?|css|jpg|jpeg|png|gif|svg|ico|webp))$",
       "dest": "/$1"
     },
     {
