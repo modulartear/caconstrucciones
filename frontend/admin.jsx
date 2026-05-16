@@ -5,12 +5,29 @@ const { useState, useEffect, useMemo, useRef } = React;
 
 // ───────────────────────── Auth ─────────────────────────
 function useAuth() {
-  const [ok, setOk] = useState(() => sessionStorage.getItem('ca_admin') === '1');
+  const [ok, setOk] = useState(() => localStorage.getItem('ca_admin_token') !== null);
   return [ok, setOk];
 }
 function logout() {
-  sessionStorage.removeItem('ca_admin');
+  localStorage.removeItem('ca_admin_token');
   window.location.href = 'index.html';
+}
+async function loginWithAPI(username, password) {
+  try {
+    const response = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', username, password })
+    });
+    const data = await response.json();
+    if (response.ok && data.token) {
+      localStorage.setItem('ca_admin_token', data.token);
+      return { success: true };
+    }
+    return { success: false, error: data.error || 'Login failed' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 }
 
 // ───────────────────────── Helpers ─────────────────────────
@@ -82,12 +99,18 @@ function Login({ onSuccess }) {
   const [u, setU] = useState('');
   const [p, setP] = useState('');
   const [err, setErr] = useState('');
-  const submit = (e) => {
+  const [loading, setLoading] = useState(false);
+  const submit = async (e) => {
     e.preventDefault();
-    if (u === 'Admin' && p === '1234') {
-      sessionStorage.setItem('ca_admin', '1');
+    setLoading(true);
+    setErr('');
+    const result = await loginWithAPI(u, p);
+    if (result.success) {
       onSuccess();
-    } else setErr('Credenciales incorrectas.');
+    } else {
+      setErr(result.error || 'Credenciales incorrectas.');
+    }
+    setLoading(false);
   };
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
@@ -104,15 +127,17 @@ function Login({ onSuccess }) {
         <div style={{ display: 'grid', gap: 14 }}>
           <div>
             <label>Usuario</label>
-            <input autoFocus value={u} onChange={(e) => { setU(e.target.value); setErr(''); }} />
+            <input autoFocus value={u} onChange={(e) => { setU(e.target.value); setErr(''); }} disabled={loading} />
           </div>
           <div>
             <label>Contraseña</label>
-            <input type="password" value={p} onChange={(e) => { setP(e.target.value); setErr(''); }} />
+            <input type="password" value={p} onChange={(e) => { setP(e.target.value); setErr(''); }} disabled={loading} />
           </div>
           {err && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</div>}
-          <button className="btn btn-primary" style={{ justifyContent: 'center', padding: 14 }} type="submit">Ingresar</button>
-          <div style={{ fontSize: 12, color: 'var(--muted-2)', textAlign: 'center' }}>Demo: <code style={{ color: 'var(--muted)' }}>Admin / 1234</code></div>
+          <button className="btn btn-primary" style={{ justifyContent: 'center', padding: 14 }} type="submit" disabled={loading}>
+            {loading ? 'Verificando...' : 'Ingresar'}
+          </button>
+          <div style={{ fontSize: 12, color: 'var(--muted-2)', textAlign: 'center' }}>Usa tus credenciales de administrador</div>
         </div>
         <div style={{ marginTop: 18, fontSize: 12, textAlign: 'center' }}>
           <a href="index.html" style={{ color: 'var(--muted)' }}>← Volver al sitio</a>
