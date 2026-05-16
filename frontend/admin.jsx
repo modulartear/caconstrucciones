@@ -6,7 +6,15 @@ const { useState, useEffect, useMemo, useRef } = React;
 // ───────────────────────── Auth ─────────────────────────
 function useAuth() {
   const [ok, setOk] = useState(() => localStorage.getItem('ca_admin_token') !== null);
-  return [ok, setOk];
+  const setOkWrapped = (val) => {
+    if (val) {
+      localStorage.setItem('ca_admin_token', '1');
+    } else {
+      localStorage.removeItem('ca_admin_token');
+    }
+    setOk(val);
+  };
+  return [ok, setOkWrapped];
 }
 function logout() {
   localStorage.removeItem('ca_admin_token');
@@ -21,7 +29,6 @@ async function loginWithAPI(username, password) {
     });
     const data = await response.json();
     if (response.ok && data.token) {
-      localStorage.setItem('ca_admin_token', data.token);
       return { success: true };
     }
     return { success: false, error: data.error || 'Login failed' };
@@ -109,8 +116,8 @@ function Login({ onSuccess }) {
       onSuccess();
     } else {
       setErr(result.error || 'Credenciales incorrectas.');
+      setLoading(false);
     }
-    setLoading(false);
   };
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
