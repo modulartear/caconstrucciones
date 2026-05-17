@@ -106,7 +106,8 @@
   // Inicializar: cargar todos los datos desde API
   async function init() {
     console.log('🔄 Cargando datos de Firestore...');
-    for (const name of Object.keys(API_ENDPOINTS)) {
+    const collections = ['materials', 'projects', 'budgets', 'clients', 'testimonials', 'brands', 'site'];
+    for (const name of collections) {
       try {
         await loadFromAPI(name);
       } catch (e) {
