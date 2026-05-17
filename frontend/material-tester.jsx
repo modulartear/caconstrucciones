@@ -59,11 +59,11 @@ function generateTexture(canvas, type, baseColor, accentColor) {
         if (lx > tw || ly > th) {
           data[i] = 30; data[i + 1] = 30; data[i + 2] = 32;
         } else {
-          const var = rand(-8, 8);
+          const noise = rand(-8, 8);
           const t = 0.35 + Math.random() * 0.35;
-          data[i] = lerp(rgb1.r, rgb2.r, t) + var;
-          data[i + 1] = lerp(rgb1.g, rgb2.g, t) + var;
-          data[i + 2] = lerp(rgb1.b, rgb2.b, t) + var;
+          data[i] = lerp(rgb1.r, rgb2.r, t) + noise;
+          data[i + 1] = lerp(rgb1.g, rgb2.g, t) + noise;
+          data[i + 2] = lerp(rgb1.b, rgb2.b, t) + noise;
         }
       }
     }
