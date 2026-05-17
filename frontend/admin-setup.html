@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Configuración Inicial · CA Construcciones</title>
+  <link rel="icon" href="assets/logo.jpg" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { background: var(--bg); }
+    .setup-card {
+      max-width: 420px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 36px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+    }
+    .setup-form { display: grid; gap: 14px; margin-top: 20px; }
+    .success { color: var(--success); }
+    .error { color: var(--danger); }
+  </style>
+</head>
+<body>
+  <div class="grain"></div>
+  <div style="min-height: 100vh; display: grid; placeItems: center; padding: 24px;">
+    <div class="setup-card">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+        <div class="brand-mark"><img src="assets/logo.jpg" alt="" /></div>
+        <div>
+          <div style="font-family: var(--font-display); font-size: 17; font-weight: 700;">CA Construcciones</div>
+          <div style="font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);">Setup inicial</div>
+        </div>
+      </div>
+
+      <h3 style="font-size: 22px; margin-bottom: 6px;">Crear administrador inicial</h3>
+      <div class="sub" style="color: var(--muted); font-size: 13px; margin-bottom: 22px;">
+        Este formulario solo funciona una vez para crear el primer administrador.
+      </div>
+
+      <form class="setup-form" id="setupForm">
+        <div>
+          <label>Email</label>
+          <input type="email" id="email" value="diseartevt@gmail.com" required />
+        </div>
+        <div>
+          <label>Contraseña</label>
+          <input type="password" id="password" value="Caseros305" required />
+        </div>
+        <div id="message" style="font-size: 13px; min-height: 20px;"></div>
+        <button type="submit" class="btn btn-primary" style="padding: 14px; justify-content: center;">
+          <span id="btnText">Crear administrador</span>
+        </button>
+      </form>
+
+      <div style="margin-top: 18px; font-size: 12px; text-align: center;">
+        <a href="admin.html" style="color: var(--muted);">← Ir al panel admin</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('setupForm');
+    const messageEl = document.getElementById('message');
+    const btnText = document.getElementById('btnText');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const btn = form.querySelector('button');
+
+      btn.disabled = true;
+      btnText.textContent = 'Creando...';
+      messageEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          messageEl.className = 'success';
+          messageEl.textContent = '✓ Administrador creado correctamente. Redirigiendo...';
+          setTimeout(() => {
+            window.location.href = 'admin.html';
+          }, 2000);
+        } else {
+          messageEl.className = 'error';
+          messageEl.textContent = '✗ ' + (data.error || 'Error desconocido');
+          btn.disabled = false;
+          btnText.textContent = 'Crear administrador';
+        }
+      } catch (error) {
+        messageEl.className = 'error';
+        messageEl.textContent = '✗ ' + error.message;
+        btn.disabled = false;
+        btnText.textContent = 'Crear administrador';
+      }
+    });
+  </script>
+</body>
+</html>
