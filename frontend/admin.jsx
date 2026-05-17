@@ -76,9 +76,45 @@ function ConfirmDel({ name, onClose, onConfirm }) {
   );
 }
 
+async function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+}
+
 function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2 }) {
   const [err, setErr] = useState(null);
-  const onFile = (file) => {
+  const onFile = async (file) => {
     if (!file) return;
     setErr(null);
     
@@ -87,9 +123,12 @@ function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2 })
       return;
     }
     
-    const reader = new FileReader();
-    reader.onload = (e) => onChange(e.target.result);
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file);
+      onChange(compressed);
+    } catch (e) {
+      setErr('Error al procesar la imagen');
+    }
   };
   return (
     <div className={`photo-upload ${value ? 'has-image' : ''}`}>
@@ -535,6 +574,16 @@ function GalleryInput({ value = [], onChange, max = 6 }) {
     const newGallery = value.filter((_, i) => i !== index);
     onChange(newGallery);
   };
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      addPhoto(compressed);
+    } catch (e) {
+      console.error('Error al comprimir imagen:', e);
+    }
+  };
   return (
     <div style={{ display: 'grid', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -554,13 +603,7 @@ function GalleryInput({ value = [], onChange, max = 6 }) {
                 <>
                   <div style={{ fontSize: 13 }}>Foto {index + 1}</div>
                   <div style={{ fontSize: 11, marginTop: 4, color: 'var(--muted-2)' }}>JPG / PNG / WebP</div>
-                  <input type="file" accept="image/*" disabled={value.length >= max} onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (ev) => addPhoto(ev.target.result);
-                    reader.readAsDataURL(file);
-                  }} />
+                  <input type="file" accept="image/*" disabled={value.length >= max} onChange={handleFile} />
                 </>
               )}
             </div>
