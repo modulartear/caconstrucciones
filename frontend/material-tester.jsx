@@ -657,17 +657,77 @@ function MaterialTester() {
   const reDetect = async () => {
     if (!photo) return;
     
-    const { walls, floors } = analyzeImage(photo, canvasRef.current.width, canvasRef.current.height);
-    
-    const wallCtx = walls.getContext('2d');
-    const wallData = wallCtx.getImageData(0, 0, walls.width, walls.height);
-    const wallMaskCtx = wallMaskRef.current.getContext('2d');
-    wallMaskCtx.putImageData(wallData, 0, 0);
+    try {
+      // Primero intentamos usar la API de IA (Hugging Face)
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvasRef.current.width;
+      tempCanvas.height = canvasRef.current.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      tempCtx.drawImage(photo, 0, 0, tempCanvas.width, tempCanvas.height);
+      const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8);
 
-    const floorCtx = floors.getContext('2d');
-    const floorData = floorCtx.getImageData(0, 0, floors.width, floors.height);
-    const floorMaskCtx = floorMaskRef.current.getContext('2d');
-    floorMaskCtx.putImageData(floorData, 0, 0);
+      const response = await fetch('/api/segment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64 })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.walls && data.floors) {
+          // Cargar máscaras desde la API
+          const loadMaskFromBase64 = (base64) => {
+            return new Promise((resolve) => {
+              const img = new Image();
+              img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = canvasRef.current.width;
+                c.height = canvasRef.current.height;
+                const ctx = c.getContext('2d');
+                ctx.drawImage(img, 0, 0, c.width, c.height);
+                resolve(c);
+              };
+              img.src = base64;
+            });
+          };
+
+          const [wallsCanvas, floorsCanvas] = await Promise.all([
+            loadMaskFromBase64(data.walls),
+            loadMaskFromBase64(data.floors)
+          ]);
+
+          const wallCtx = wallsCanvas.getContext('2d');
+          const wallData = wallCtx.getImageData(0, 0, wallsCanvas.width, wallsCanvas.height);
+          const wallMaskCtx = wallMaskRef.current.getContext('2d');
+          wallMaskCtx.putImageData(wallData, 0, 0);
+
+          const floorCtx = floorsCanvas.getContext('2d');
+          const floorData = floorCtx.getImageData(0, 0, floorsCanvas.width, floorsCanvas.height);
+          const floorMaskCtx = floorMaskRef.current.getContext('2d');
+          floorMaskCtx.putImageData(floorData, 0, 0);
+        } else {
+          // Fallback a detección local
+          throw new Error('API no devolvió máscaras');
+        }
+      } else {
+        throw new Error('Error en API');
+      }
+    } catch (error) {
+      // Fallback a detección local mejorada
+      console.log('Usando detección local:', error);
+      const { walls, floors } = analyzeImage(photo, canvasRef.current.width, canvasRef.current.height);
+      
+      const wallCtx = walls.getContext('2d');
+      const wallData = wallCtx.getImageData(0, 0, walls.width, walls.height);
+      const wallMaskCtx = wallMaskRef.current.getContext('2d');
+      wallMaskCtx.putImageData(wallData, 0, 0);
+
+      const floorCtx = floors.getContext('2d');
+      const floorData = floorCtx.getImageData(0, 0, floors.width, floors.height);
+      const floorMaskCtx = floorMaskRef.current.getContext('2d');
+      floorMaskCtx.putImageData(floorData, 0, 0);
+    }
 
     composite();
   };
