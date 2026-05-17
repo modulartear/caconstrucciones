@@ -1,9 +1,11 @@
 import admin from 'firebase-admin';
-import dotenv from 'dotenv';
-
-dotenv.config({ path: './backend/.env' });
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+
+if (!serviceAccount.project_id) {
+  console.error('[Firebase Init] Missing FIREBASE_SERVICE_ACCOUNT environment variable');
+}
+
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -88,7 +90,7 @@ export default async function handler(req, res) {
 
     res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
-    console.error('Error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('[Firestore API Error]', error);
+    res.status(500).json({ error: error.message, type: error.code || 'UNKNOWN' });
   }
 }
