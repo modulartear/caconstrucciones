@@ -1,3 +1,17 @@
+import admin from 'firebase-admin';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: './backend/.env' });
+
+// Initialize Firebase Admin
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+const db = admin.firestore();
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
@@ -17,6 +31,23 @@ export default async function handler(req, res) {
 
     // Login action
     if (action === 'login') {
+      // First try Firestore for admins
+      const adminsSnapshot = await db.collection('admins').where('username', '==', username).get();
+      
+      if (!adminsSnapshot.empty) {
+        const adminDoc = adminsSnapshot.docs[0];
+        const adminData = adminDoc.data();
+        
+        // Check password (NOTE: In production, you should hash passwords!)
+        if (adminData.password === password) {
+          return res.status(200).json({
+            success: true,
+            token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
+          });
+        }
+      }
+      
+      // Fallback to environment variables for backwards compatibility
       const adminUser = process.env.ADMIN_USERNAME || 'admin';
       const adminPass = process.env.ADMIN_PASSWORD || '1234';
 
