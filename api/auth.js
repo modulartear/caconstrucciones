@@ -31,20 +31,29 @@ export default async function handler(req, res) {
 
     // Login action
     if (action === 'login') {
+      console.log('Login attempt for username:', username);
+      
       // First try Firestore for admins
       const adminsSnapshot = await db.collection('admins').where('username', '==', username).get();
+      console.log('Admins snapshot size:', adminsSnapshot.size);
       
       if (!adminsSnapshot.empty) {
         const adminDoc = adminsSnapshot.docs[0];
         const adminData = adminDoc.data();
+        console.log('Admin data found:', adminData);
         
         // Check password (NOTE: In production, you should hash passwords!)
         if (adminData.password === password) {
+          console.log('Password matches!');
           return res.status(200).json({
             success: true,
             token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
           });
+        } else {
+          console.log('Password does NOT match');
         }
+      } else {
+        console.log('No admin found with username:', username);
       }
       
       // Fallback to environment variables for backwards compatibility
