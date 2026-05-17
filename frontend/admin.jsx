@@ -24,8 +24,18 @@ function logout() {
 }
 async function loginWithFirebase(email, password) {
   try {
+    console.log('[Login] Iniciando login con:', email);
+
+    if (!window.firebaseAuth) {
+      console.error('[Login] firebaseAuth no está disponible');
+      return { success: false, error: 'Firebase no inicializado' };
+    }
+
+    console.log('[Login] Iniciando signIn...');
     const result = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+    console.log('[Login] SignIn exitoso, obteniendo token...');
     const token = await result.user.getIdToken();
+    console.log('[Login] Token obtenido, verificando admin...');
 
     const verifyRes = await fetch('/api/auth', {
       method: 'POST',
@@ -36,19 +46,27 @@ async function loginWithFirebase(email, password) {
       body: JSON.stringify({ action: 'verify' })
     });
 
+    console.log('[Login] Verificación admin - status:', verifyRes.status);
+    const verifyData = await verifyRes.json();
+    console.log('[Login] Respuesta verificación:', verifyData);
+
     if (verifyRes.ok) {
       localStorage.setItem('ca_admin_token', token);
       localStorage.setItem('ca_admin_email', email);
+      console.log('[Login] Login exitoso');
       return { success: true };
     } else {
       await window.firebaseAuth.signOut();
-      return { success: false, error: 'No tienes permisos de administrador' };
+      return { success: false, error: verifyData.error || 'No tienes permisos de administrador' };
     }
   } catch (error) {
+    console.error('[Login] Error completo:', error);
     let msg = error.message;
     if (error.code === 'auth/user-not-found') msg = 'Usuario no encontrado';
     if (error.code === 'auth/wrong-password') msg = 'Contraseña incorrecta';
     if (error.code === 'auth/invalid-email') msg = 'Email inválido';
+    if (error.code === 'auth/invalid-credential') msg = 'Email o contraseña incorrectos';
+    console.error('[Login] Error final:', msg);
     return { success: false, error: msg };
   }
 }
