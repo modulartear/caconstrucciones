@@ -1,14 +1,14 @@
 // CA Construcciones — API Store (datos desde Firestore vía API)
 (function () {
   const API_ENDPOINTS = {
-    materials: '/api/firestore-materials',
-    projects: '/api/firestore-projects',
-    testimonials: '/api/firestore-testimonials',
-    brands: '/api/firestore-brands',
-    budgets: '/api/firestore-budgets',
-    clients: '/api/firestore-clients',
-    admins: '/api/firestore-admins',
-    site: '/api/firestore-site'
+    materials: '/api/firestore/materials',
+    projects: '/api/firestore/projects',
+    testimonials: '/api/firestore/testimonials',
+    brands: '/api/firestore/brands',
+    budgets: '/api/firestore/budgets',
+    clients: '/api/firestore/clients',
+    admins: '/api/firestore/admins',
+    site: '/api/firestore/site'
   };
 
   const DEFAULT_SEEDS = {
