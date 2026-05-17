@@ -1,3 +1,5 @@
+console.log('🚀 API AUTH.JS LOADED!');
+
 import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 
@@ -12,6 +14,7 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 
 export default async function handler(req, res) {
+  console.log('📥 REQUEST RECEIVED at /api/auth:', req.method, req.body);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
