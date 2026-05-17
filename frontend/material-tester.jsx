@@ -1,191 +1,99 @@
-// CA Construcciones — Material tester con IA + simulación procedural
-// Expone: window.MaterialTester (componente), window.generateTexture, window.ProceduralSwatch
+// ───────────────────────── Procedural Swatch Generator ─────────────────────────
 
-const { useState, useEffect, useRef, useCallback } = React;
-
-// ───────────────────────── Texture generators ─────────────────────────
-
-function hexToRgb(hex) {
-  const m = hex.replace('#', '');
-  const n = parseInt(m.length === 3 ? m.split('').map((c) => c + c).join('') : m, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-function shade(hex, amt) {
-  const [r, g, b] = hexToRgb(hex);
-  const f = (v) => Math.max(0, Math.min(255, v + amt));
-  return `rgb(${f(r)},${f(g)},${f(b)})`;
-}
-function withAlpha(hex, a) {
-  const [r, g, b] = hexToRgb(hex);
-  return `rgba(${r},${g},${b},${a})`;
-}
-
-function generateTexture(canvas, type, color, accent) {
+function generateTexture(canvas, type, baseColor, accentColor) {
   const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = baseColor; ctx.fillRect(0, 0, w, h);
+  const imageData = ctx.getImageData(0, 0, w, h);
+  const data = imageData.data;
 
-  // base fill
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, w, h);
+  const hexToRgb = (hex) => {
+    const bigint = parseInt(hex.replace('#', ''), 16);
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+  };
 
-  if (type === 'wood') {
-    // base gradient
-    const g = ctx.createLinearGradient(0, 0, w, 0);
-    g.addColorStop(0, shade(color, -8));
-    g.addColorStop(0.5, color);
-    g.addColorStop(1, shade(color, -4));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
+  const rgb1 = hexToRgb(baseColor);
+  const rgb2 = hexToRgb(accentColor || baseColor);
+  const rand = (min, max) => Math.random() * (max - min) + min;
 
-    // grain stripes
-    const stripes = Math.floor(h / 6);
-    for (let i = 0; i < stripes; i++) {
-      const y = (i / stripes) * h + Math.sin(i * 1.7) * 2;
-      ctx.strokeStyle = withAlpha(accent, 0.08 + Math.random() * 0.18);
-      ctx.lineWidth = 0.5 + Math.random() * 1.4;
-      ctx.beginPath();
-      ctx.moveTo(-2, y);
-      for (let x = 0; x <= w + 4; x += 6) {
-        ctx.lineTo(x, y + Math.sin(x * 0.04 + i * 0.5) * 1.2);
+  const addNoise = (alpha=0.08) => {
+    for (let i = 0; i < data.length; i += 4) {
+      const n = rand(-15, 15);
+      data[i] = Math.max(0, Math.min(255, data[i] + n));
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + n));
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + n));
+    }
+  };
+
+  const lerp = (a,b,t)=>a+(b-a)*t;
+
+  if (type === 'concrete') {
+    addNoise(0.12);
+    for (let i = 0; i < 60; i++) {
+      const x = rand(0, w), y = rand(0, h);
+      const r = rand(1, 3);
+      const idx = (Math.floor(y) * w + Math.floor(x)) * 4;
+      const d = rand(10, 20);
+      data[idx] = Math.max(0, Math.min(255, data[idx] - d));
+      data[idx + 1] = Math.max(0, Math.min(255, data[idx + 1] - d));
+      data[idx + 2] = Math.max(0, Math.min(255, data[idx + 2] - d));
+    }
+  } else if (type === 'wood') {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const grain = Math.sin(x * 0.08 + Math.sin(y * 0.02) * 2) * 20;
+        const t = Math.random();
+        data[i] = lerp(rgb1.r, rgb2.r, t) + grain + rand(-8, 8);
+        data[i + 1] = lerp(rgb1.g, rgb2.g, t) + grain + rand(-8, 8);
+        data[i + 2] = lerp(rgb1.b, rgb2.b, t) + grain + rand(-8, 8);
       }
-      ctx.stroke();
     }
-    // knots
-    for (let i = 0; i < 2; i++) {
-      const cx = Math.random() * w;
-      const cy = Math.random() * h;
-      const rad = 6 + Math.random() * 12;
-      const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-      gg.addColorStop(0, withAlpha(accent, 0.55));
-      gg.addColorStop(1, withAlpha(accent, 0));
-      ctx.fillStyle = gg;
-      ctx.beginPath();
-      ctx.arc(cx, cy, rad, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (type === 'marble') {
-    // soft base gradient
-    const g = ctx.createLinearGradient(0, 0, w, h);
-    g.addColorStop(0, color);
-    g.addColorStop(0.5, shade(color, 6));
-    g.addColorStop(1, shade(color, -3));
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    // soft cloud blobs
-    for (let i = 0; i < 6; i++) {
-      const cx = Math.random() * w;
-      const cy = Math.random() * h;
-      const rad = w * (0.2 + Math.random() * 0.3);
-      const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-      cg.addColorStop(0, withAlpha(accent, 0.1));
-      cg.addColorStop(1, withAlpha(accent, 0));
-      ctx.fillStyle = cg;
-      ctx.fillRect(0, 0, w, h);
-    }
-    // veins
-    for (let i = 0; i < 5; i++) {
-      ctx.strokeStyle = withAlpha(accent, 0.35 + Math.random() * 0.35);
-      ctx.lineWidth = 0.4 + Math.random() * 1.6;
-      ctx.beginPath();
-      let x = Math.random() * w;
-      let y = Math.random() * h;
-      ctx.moveTo(x, y);
-      for (let j = 0; j < 5; j++) {
-        const cx1 = Math.random() * w;
-        const cy1 = Math.random() * h;
-        x += (Math.random() - 0.5) * w * 0.6;
-        y += (Math.random() - 0.5) * h * 0.6;
-        ctx.quadraticCurveTo(cx1, cy1, x, y);
-      }
-      ctx.stroke();
-    }
-  } else if (type === 'brick') {
-    const cols = 4;
-    const rows = 6;
-    const bw = w / cols;
-    const bh = h / rows;
-    for (let r = 0; r < rows + 1; r++) {
-      const offset = (r % 2) * (bw / 2);
-      for (let c = -1; c < cols + 1; c++) {
-        const x = c * bw + offset;
-        const y = r * bh;
-        ctx.fillStyle = shade(color, (Math.random() - 0.5) * 22);
-        ctx.fillRect(x + 1.2, y + 1.2, bw - 2.4, bh - 2.4);
-        // tiny noise inside brick
-        for (let k = 0; k < 6; k++) {
-          ctx.fillStyle = withAlpha(accent, 0.04 + Math.random() * 0.08);
-          ctx.fillRect(x + Math.random() * bw, y + Math.random() * bh, 2, 2);
+  } else if (type === 'tiles') {
+    const tw = 44, th = 44, gap = 3;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const lx = x % (tw + gap);
+        const ly = y % (th + gap);
+        if (lx > tw || ly > th) {
+          data[i] = 30; data[i + 1] = 30; data[i + 2] = 32;
+        } else {
+          const var = rand(-8, 8);
+          const t = 0.35 + Math.random() * 0.35;
+          data[i] = lerp(rgb1.r, rgb2.r, t) + var;
+          data[i + 1] = lerp(rgb1.g, rgb2.g, t) + var;
+          data[i + 2] = lerp(rgb1.b, rgb2.b, t) + var;
         }
       }
     }
-  } else if (type === 'cement') {
-    // noise + soft blobs
-    for (let i = 0; i < 30; i++) {
-      const cx = Math.random() * w;
-      const cy = Math.random() * h;
-      const rad = 10 + Math.random() * 50;
-      const gg = ctx.createRadialGradient(cx, cy, 0, cx, cy, rad);
-      gg.addColorStop(0, withAlpha(accent, 0.12));
-      gg.addColorStop(1, withAlpha(accent, 0));
-      ctx.fillStyle = gg;
-      ctx.beginPath();
-      ctx.arc(cx, cy, rad, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    addNoise(ctx, w, h, 20, 0.18);
-  } else if (type === 'stone') {
-    // travertino: warm crema with horizontal striations
-    for (let i = 0; i < 18; i++) {
-      const y = (i / 18) * h + (Math.random() - 0.5) * 6;
-      ctx.strokeStyle = withAlpha(accent, 0.15 + Math.random() * 0.2);
-      ctx.lineWidth = 0.6 + Math.random() * 2;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      for (let x = 0; x <= w; x += 8) {
-        ctx.lineTo(x, y + Math.sin(x * 0.07 + i) * 1.5);
+  } else if (type === 'paint') {
+    addNoise(0.05);
+    for (let i = 0; i < data.length; i += 4) {
+      const v = rand(0, 1);
+      if (v > 0.995) {
+        const sp = rand(20, 40);
+        data[i] = Math.max(0, Math.min(255, data[i] + sp));
+        data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + sp));
+        data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + sp));
       }
-      ctx.stroke();
     }
-    // pores
-    for (let i = 0; i < 14; i++) {
-      ctx.fillStyle = withAlpha(accent, 0.2 + Math.random() * 0.2);
-      ctx.beginPath();
-      ctx.arc(Math.random() * w, Math.random() * h, 0.6 + Math.random() * 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    addNoise(ctx, w, h, 12, 0.12);
   } else {
-    // paint: subtle noise
-    addNoise(ctx, w, h, 8, 0.12);
+    addNoise(0.06);
   }
+
+  ctx.putImageData(imageData, 0, 0);
 }
 
-function addNoise(ctx, w, h, amount, alpha) {
-  const id = ctx.getImageData(0, 0, w, h);
-  for (let i = 0; i < id.data.length; i += 4) {
-    const n = (Math.random() - 0.5) * 2 * amount;
-    id.data[i] = Math.max(0, Math.min(255, id.data[i] + n));
-    id.data[i + 1] = Math.max(0, Math.min(255, id.data[i + 1] + n));
-    id.data[i + 2] = Math.max(0, Math.min(255, id.data[i + 2] + n));
-  }
-  ctx.putImageData(id, 0, 0);
-}
-
-// ───────────────────────── ProceduralSwatch ─────────────────────────
-
-function ProceduralSwatch({ material, size = 200, className = '' }) {
+function ProceduralSwatch({ material, size = 90, className = '' }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.width = size;
-    ref.current.height = size;
     if (material.photo) {
+      const ctx = ref.current.getContext('2d');
       const img = new Image();
       img.onload = () => {
-        const ctx = ref.current.getContext('2d');
-        ctx.drawImage(img, 0, 0, size, size);
+        ctx.drawImage(img, 0, 0, ref.current.width, ref.current.height);
       };
       img.src = material.photo;
     } else {
@@ -195,7 +103,7 @@ function ProceduralSwatch({ material, size = 200, className = '' }) {
   return <canvas ref={ref} className={className} />;
 }
 
-// ───────────────────────── Detection Mejorada ─────────────────────────
+// ───────────────────────── Detection Mejorada (solo frontend) ─────────────────────────
 
 function analyzeImage(img, width, height) {
   const tempCanvas = document.createElement('canvas');
@@ -210,7 +118,10 @@ function analyzeImage(img, width, height) {
   const wallMask = new Uint8Array(width * height);
   const floorMask = new Uint8Array(width * height);
 
-  // Paso 1: Calcular estadísticas generales de la imagen
+  const blockSize = 8;
+  const floorStart = Math.floor(height * 0.55);
+  const wallEnd = Math.floor(height * 0.75);
+
   let totalR = 0, totalG = 0, totalB = 0, totalPixels = 0;
   for (let i = 0; i < data.length; i += 4) {
     totalR += data[i];
@@ -218,16 +129,7 @@ function analyzeImage(img, width, height) {
     totalB += data[i + 2];
     totalPixels++;
   }
-  const avgR = totalR / totalPixels;
-  const avgG = totalG / totalPixels;
-  const avgB = totalB / totalPixels;
 
-  const blockSize = 8;
-  const floorStart = Math.floor(height * 0.55);
-  const floorEnd = height;
-  const wallEnd = Math.floor(height * 0.75);
-
-  // Paso 2: Analizar cada bloque
   for (let by = 0; by < height; by += blockSize) {
     for (let bx = 0; bx < width; bx += blockSize) {
       const bh = Math.min(blockSize, height - by);
@@ -255,14 +157,15 @@ function analyzeImage(img, width, height) {
       variance /= count;
 
       const brightness = (r + g + b) / 3;
-      const saturation = (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+      const maxCh = Math.max(r, g, b);
+      const minCh = Math.min(r, g, b);
+      const saturation = maxCh > 0 ? (maxCh - minCh) / maxCh : 0;
 
-      // Criterios mejorados
       const isUniform = variance < 800;
       const isNotTooDark = brightness > 40;
       const isNotTooSaturated = saturation < 0.6;
       
-      const isFloorArea = by >= floorStart && by <= floorEnd;
+      const isFloorArea = by >= floorStart;
       const isWallArea = by <= wallEnd && !isFloorArea;
 
       let wallValue = 0;
@@ -276,7 +179,6 @@ function analyzeImage(img, width, height) {
         }
       }
 
-      // Llenar el bloque
       for (let y = by; y < by + bh; y++) {
         for (let x = bx; x < bx + bw; x++) {
           const idx = y * width + x;
@@ -287,7 +189,6 @@ function analyzeImage(img, width, height) {
     }
   }
 
-  // Paso 3: Operaciones morfológicas mejoradas
   const dilate = (arr, times = 2) => {
     let result = new Uint8Array(arr);
     for (let t = 0; t < times; t++) {
@@ -370,7 +271,6 @@ function analyzeImage(img, width, height) {
   processedFloors = fillHoles(processedFloors);
   processedFloors = dilate(processedFloors, 2);
 
-  // Paso 4: Eliminar solapamiento (pisos tienen prioridad en su área)
   for (let y = floorStart; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const idx = y * width + x;
@@ -506,8 +406,8 @@ function MaterialTester() {
       ctx.globalAlpha = 1;
     };
 
-    if (selectedWall) applyMaterial(wallPatternRef.current, wallMaskRef.current);
-    if (selectedFloor) applyMaterial(floorPatternRef.current, floorMaskRef.current);
+    if (selectedWall && wallMaskRef.current) applyMaterial(wallPatternRef.current, wallMaskRef.current);
+    if (selectedFloor && floorMaskRef.current) applyMaterial(floorPatternRef.current, floorMaskRef.current);
   }, [photo, intensity, comparing, selectedWall, selectedFloor]);
 
   useEffect(() => { composite(); }, [composite]);
@@ -518,10 +418,6 @@ function MaterialTester() {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = async () => {
-        if (!canvasRef.current || !wallMaskRef.current || !floorMaskRef.current) {
-          console.error('Canvas refs not ready');
-          return;
-        }
         const maxW = 920;
         const maxH = 620;
         let w = img.width;
@@ -559,10 +455,6 @@ function MaterialTester() {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = async () => {
-      if (!canvasRef.current || !wallMaskRef.current || !floorMaskRef.current) {
-        console.error('Canvas refs not ready');
-        return;
-      }
       const maxW = 920;
       const maxH = 620;
       let w = img.width;
@@ -603,11 +495,14 @@ function MaterialTester() {
     };
   };
 
-  const getActiveMaskRef = () => activeSurface === 'walls' ? wallMaskRef.current : floorMaskRef.current;
+  const getActiveMaskRef = () => {
+    return activeSurface === 'walls' ? wallMaskRef.current : floorMaskRef.current;
+  };
 
   const stroke = (from, to) => {
     const maskRef = getActiveMaskRef();
-    const mctx = maskRef.current.getContext('2d');
+    if (!maskRef) return;
+    const mctx = maskRef.getContext('2d');
     if (mode === 'paint') {
       mctx.globalCompositeOperation = 'source-over';
       mctx.strokeStyle = '#fff';
@@ -649,94 +544,36 @@ function MaterialTester() {
 
   const resetMask = () => {
     const maskRef = getActiveMaskRef();
-    const mctx = maskRef.current.getContext('2d');
-    mctx.clearRect(0, 0, maskRef.current.width, maskRef.current.height);
+    if (!maskRef) return;
+    const mctx = maskRef.getContext('2d');
+    mctx.clearRect(0, 0, maskRef.width, maskRef.height);
     composite();
   };
 
-  const reDetect = async () => {
+  const reDetect = () => {
     if (!photo) return;
+    const { walls, floors } = analyzeImage(photo, canvasRef.current.width, canvasRef.current.height);
     
-    try {
-      // Primero intentamos usar la API de IA (Hugging Face)
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = canvasRef.current.width;
-      tempCanvas.height = canvasRef.current.height;
-      const tempCtx = tempCanvas.getContext('2d');
-      tempCtx.drawImage(photo, 0, 0, tempCanvas.width, tempCanvas.height);
-      const imageBase64 = tempCanvas.toDataURL('image/jpeg', 0.8);
+    const wallCtx = walls.getContext('2d');
+    const wallData = wallCtx.getImageData(0, 0, walls.width, walls.height);
+    const wallMaskCtx = wallMaskRef.current.getContext('2d');
+    wallMaskCtx.putImageData(wallData, 0, 0);
 
-      const response = await fetch('/api/segment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64 })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.walls && data.floors) {
-          // Cargar máscaras desde la API
-          const loadMaskFromBase64 = (base64) => {
-            return new Promise((resolve) => {
-              const img = new Image();
-              img.onload = () => {
-                const c = document.createElement('canvas');
-                c.width = canvasRef.current.width;
-                c.height = canvasRef.current.height;
-                const ctx = c.getContext('2d');
-                ctx.drawImage(img, 0, 0, c.width, c.height);
-                resolve(c);
-              };
-              img.src = base64;
-            });
-          };
-
-          const [wallsCanvas, floorsCanvas] = await Promise.all([
-            loadMaskFromBase64(data.walls),
-            loadMaskFromBase64(data.floors)
-          ]);
-
-          const wallCtx = wallsCanvas.getContext('2d');
-          const wallData = wallCtx.getImageData(0, 0, wallsCanvas.width, wallsCanvas.height);
-          const wallMaskCtx = wallMaskRef.current.getContext('2d');
-          wallMaskCtx.putImageData(wallData, 0, 0);
-
-          const floorCtx = floorsCanvas.getContext('2d');
-          const floorData = floorCtx.getImageData(0, 0, floorsCanvas.width, floorsCanvas.height);
-          const floorMaskCtx = floorMaskRef.current.getContext('2d');
-          floorMaskCtx.putImageData(floorData, 0, 0);
-        } else {
-          // Fallback a detección local
-          throw new Error('API no devolvió máscaras');
-        }
-      } else {
-        throw new Error('Error en API');
-      }
-    } catch (error) {
-      // Fallback a detección local mejorada
-      console.log('Usando detección local:', error);
-      const { walls, floors } = analyzeImage(photo, canvasRef.current.width, canvasRef.current.height);
-      
-      const wallCtx = walls.getContext('2d');
-      const wallData = wallCtx.getImageData(0, 0, walls.width, walls.height);
-      const wallMaskCtx = wallMaskRef.current.getContext('2d');
-      wallMaskCtx.putImageData(wallData, 0, 0);
-
-      const floorCtx = floors.getContext('2d');
-      const floorData = floorCtx.getImageData(0, 0, floors.width, floors.height);
-      const floorMaskCtx = floorMaskRef.current.getContext('2d');
-      floorMaskCtx.putImageData(floorData, 0, 0);
-    }
+    const floorCtx = floors.getContext('2d');
+    const floorData = floorCtx.getImageData(0, 0, floors.width, floors.height);
+    const floorMaskCtx = floorMaskRef.current.getContext('2d');
+    floorMaskCtx.putImageData(floorData, 0, 0);
 
     composite();
   };
+
   const fillAll = () => {
     const maskRef = getActiveMaskRef();
-    const mctx = maskRef.current.getContext('2d');
+    if (!maskRef) return;
+    const mctx = maskRef.getContext('2d');
     mctx.globalCompositeOperation = 'source-over';
     mctx.fillStyle = '#fff';
-    mctx.fillRect(0, 0, maskRef.current.width, maskRef.current.height);
+    mctx.fillRect(0, 0, maskRef.width, maskRef.height);
     composite();
   };
   const download = () => {
