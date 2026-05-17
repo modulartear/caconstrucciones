@@ -753,6 +753,16 @@ function ConfigPage({ toast }) {
       </div>
 
       <div className="panel" style={{ marginBottom: 18 }}>
+        <div className="panel-head"><h3>Identidad visual</h3></div>
+        <div className="panel-body padded" style={{ display: 'grid', gap: 14 }}>
+          <div className="full">
+            <label>Logo</label>
+            <PhotoInput value={s.logo} onChange={(v) => setS({ ...s, logo: v })} hint="Subí el logo de la empresa" />
+          </div>
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 18 }}>
         <div className="panel-head"><h3>Hero</h3></div>
         <div className="panel-body padded" style={{ display: 'grid', gap: 14 }}>
           <div><label>Kicker</label><input value={s.hero_kicker} onChange={(e) => setS({ ...s, hero_kicker: e.target.value })} /></div>
@@ -813,6 +823,7 @@ function App() {
   const [page, setPage] = useState(() => location.hash?.replace('#', '') || 'dashboard');
   const [toast, setToast] = useState(null);
   const budgets = useStoreVal('budgets');
+  const site = useStoreVal('site');
   const newBudgetCount = budgets.filter((b) => b.status === 'nuevo').length;
 
   useEffect(() => {
@@ -830,7 +841,9 @@ function App() {
     <div className="admin-shell">
       <aside className="admin-side">
         <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="brand-mark" style={{ width: 36, height: 36 }}><img src="assets/logo.jpg" alt="" /></div>
+          <div className="brand-mark" style={{ width: 36, height: 36 }}>
+            <img src={site.logo || "assets/logo.jpg"} alt="" />
+          </div>
           <div>
             <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 700 }}>CA Construcciones</div>
             <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--muted)' }}>Panel admin</div>

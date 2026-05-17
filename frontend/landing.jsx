@@ -46,11 +46,11 @@ function Toast({ message, onDone }) {
 }
 
 // ───────────────────────── Brand ─────────────────────────
-function BrandMark({ size = 38 }) {
+function BrandMark({ size = 38, site }) {
   return (
     <a href="#top" className="brand">
       <div className="brand-mark" style={{ width: size, height: size }}>
-        <img src="assets/logo.jpg" alt="CA Construcciones" />
+        <img src={site.logo || "assets/logo.jpg"} alt="CA Construcciones" />
       </div>
       <div className="brand-text">
         <span className="top">CA Construcciones</span>
@@ -61,7 +61,7 @@ function BrandMark({ size = 38 }) {
 }
 
 // ───────────────────────── Nav ─────────────────────────
-function Nav({ onOpenLogin }) {
+function Nav({ onOpenLogin, site }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
@@ -81,7 +81,7 @@ function Nav({ onOpenLogin }) {
     <>
       <nav className={`nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="container nav-inner">
-          <BrandMark />
+          <BrandMark site={site} />
           <div className="nav-links">
             {links.map(([h, l]) => <a key={h} href={h}>{l}</a>)}
           </div>
@@ -511,12 +511,12 @@ function Contacto({ onSubmitToast }) {
 }
 
 // ───────────────────────── Footer ─────────────────────────
-function Footer() {
+function Footer({ site }) {
   return (
     <footer>
       <div className="container footer-inner">
         <div>
-          <BrandMark />
+          <BrandMark site={site} />
           <div className="footer-credits" style={{ marginTop: 14 }}>
             © {new Date().getFullYear()} CA Construcciones · Todos los derechos reservados
           </div>
@@ -605,10 +605,11 @@ function LoginModal({ onClose, onSuccess }) {
 function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const site = useStoreVal('site');
 
   return (
     <>
-      <Nav onOpenLogin={() => setLoginOpen(true)} />
+      <Nav onOpenLogin={() => setLoginOpen(true)} site={site} />
       <Hero />
       <Servicios />
       <Obras />
@@ -617,7 +618,7 @@ function App() {
       <Testimonios />
       <Marcas />
       <Contacto onSubmitToast={setToast} />
-      <Footer />
+      <Footer site={site} />
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => { window.location.href = 'admin.html'; }} />}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
     </>
