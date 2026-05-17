@@ -17,23 +17,39 @@ function useAuth() {
   return [ok, setOkWrapped];
 }
 function logout() {
-  localStorage.removeItem('ca_admin_token');
-  window.location.href = 'index.html';
+  window.firebaseAuth.signOut().then(() => {
+    localStorage.removeItem('ca_admin_token');
+    window.location.href = 'index.html';
+  });
 }
-async function loginWithAPI(username, password) {
+async function loginWithFirebase(email, password) {
   try {
-    const response = await fetch('/api/auth', {
+    const result = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+    const token = await result.user.getIdToken();
+
+    const verifyRes = await fetch('/api/auth', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', username, password })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ action: 'verify' })
     });
-    const data = await response.json();
-    if (response.ok && data.token) {
+
+    if (verifyRes.ok) {
+      localStorage.setItem('ca_admin_token', token);
+      localStorage.setItem('ca_admin_email', email);
       return { success: true };
+    } else {
+      await window.firebaseAuth.signOut();
+      return { success: false, error: 'No tienes permisos de administrador' };
     }
-    return { success: false, error: data.error || 'Login failed' };
   } catch (error) {
-    return { success: false, error: error.message };
+    let msg = error.message;
+    if (error.code === 'auth/user-not-found') msg = 'Usuario no encontrado';
+    if (error.code === 'auth/wrong-password') msg = 'Contraseña incorrecta';
+    if (error.code === 'auth/invalid-email') msg = 'Email inválido';
+    return { success: false, error: msg };
   }
 }
 
@@ -103,15 +119,15 @@ function PhotoInput({ value, onChange, hint = 'Subí una foto' }) {
 
 // ───────────────────────── Login ─────────────────────────
 function Login({ onSuccess }) {
-  const [u, setU] = useState('');
+  const [e, setE] = useState('');
   const [p, setP] = useState('');
   const [err, setErr] = useState('');
   const [loading, setLoading] = useState(false);
-  const submit = async (e) => {
-    e.preventDefault();
+  const submit = async (ev) => {
+    ev.preventDefault();
     setLoading(true);
     setErr('');
-    const result = await loginWithAPI(u, p);
+    const result = await loginWithFirebase(e, p);
     if (result.success) {
       onSuccess();
     } else {
@@ -130,15 +146,15 @@ function Login({ onSuccess }) {
           </div>
         </div>
         <h3 style={{ fontSize: 22, marginBottom: 6 }}>Ingresá a tu cuenta</h3>
-        <div className="sub" style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 22 }}>Acceso restringido al equipo CA.</div>
+        <div className="sub" style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 22 }}>Acceso restringido a administradores.</div>
         <div style={{ display: 'grid', gap: 14 }}>
           <div>
-            <label>Usuario</label>
-            <input autoFocus value={u} onChange={(e) => { setU(e.target.value); setErr(''); }} disabled={loading} />
+            <label>Email</label>
+            <input autoFocus type="email" value={e} onChange={(ev) => { setE(ev.target.value); setErr(''); }} disabled={loading} />
           </div>
           <div>
             <label>Contraseña</label>
-            <input type="password" value={p} onChange={(e) => { setP(e.target.value); setErr(''); }} disabled={loading} />
+            <input type="password" value={p} onChange={(ev) => { setP(ev.target.value); setErr(''); }} disabled={loading} />
           </div>
           {err && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</div>}
           <button className="btn btn-primary" style={{ justifyContent: 'center', padding: 14 }} type="submit" disabled={loading}>
@@ -796,6 +812,161 @@ function ConfigPage({ toast }) {
 // ═══════════════════════════════════════════════════════════
 // SHELL
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// ADMINISTRADORES
+// ═══════════════════════════════════════════════════════════
+function AdminsPage({ toast }) {
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPass, setNewPass] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadAdmins();
+  }, []);
+
+  const loadAdmins = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('ca_admin_token');
+      const res = await fetch('/api/admins', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setAdmins(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error('Error cargando admins:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createAdmin = async () => {
+    if (!newEmail || !newPass) {
+      setError('Email y contraseña requeridos');
+      return;
+    }
+    try {
+      setCreating(true);
+      setError('');
+      const token = localStorage.getItem('ca_admin_token');
+      const res = await fetch('/api/admins', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ email: newEmail, password: newPass })
+      });
+      if (res.ok) {
+        toast('Administrador creado correctamente');
+        setNewEmail('');
+        setNewPass('');
+        setShowCreate(false);
+        loadAdmins();
+      } else {
+        const err = await res.json();
+        setError(err.error || 'Error al crear admin');
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const deleteAdmin = async (uid) => {
+    if (!confirm('¿Eliminar este administrador?')) return;
+    try {
+      const token = localStorage.getItem('ca_admin_token');
+      const res = await fetch('/api/admins', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ uid })
+      });
+      if (res.ok) {
+        toast('Administrador eliminado');
+        loadAdmins();
+      }
+    } catch (e) {
+      toast('Error eliminando admin', 'error');
+    }
+  };
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Administradores</h1>
+          <p>Gestiona los usuarios con acceso al panel administrativo.</p>
+        </div>
+        <div className="actions">
+          <button className="btn btn-sm" onClick={() => setShowCreate(!showCreate)}>
+            {showCreate ? 'Cancelar' : '+ Nuevo admin'}
+          </button>
+        </div>
+      </div>
+
+      {showCreate && (
+        <div className="card" style={{ marginBottom: 24, padding: 24 }}>
+          <h3 style={{ marginBottom: 16 }}>Crear nuevo administrador</h3>
+          <div style={{ display: 'grid', gap: 12, maxWidth: 400 }}>
+            <div>
+              <label>Email</label>
+              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="admin@ejemplo.com" />
+            </div>
+            <div>
+              <label>Contraseña</label>
+              <input type="password" value={newPass} onChange={(e) => setNewPass(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            </div>
+            {error && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{error}</div>}
+            <button className="btn btn-primary" onClick={createAdmin} disabled={creating}>
+              {creating ? 'Creando...' : 'Crear administrador'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="card">
+        {loading ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>Cargando...</div>
+        ) : admins.length === 0 ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--muted)' }}>No hay administradores</div>
+        ) : (
+          <table style={{ width: '100%' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                <th style={{ padding: 12, textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Email</th>
+                <th style={{ padding: 12, textAlign: 'left', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Creado por</th>
+                <th style={{ padding: 12, textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--muted)' }}>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {admins.map((admin, i) => (
+                <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: 12 }}><b>{admin.email}</b></td>
+                  <td style={{ padding: 12, color: 'var(--muted)', fontSize: 13 }}>{admin.createdBy || '-'}</td>
+                  <td style={{ padding: 12, textAlign: 'right' }}>
+                    <button className="btn btn-sm" style={{ background: 'var(--danger)', color: '#fff' }} onClick={() => deleteAdmin(admin.uid || admin.id)}>
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
+
 const PAGES = [
   { id: 'dashboard', label: 'Resumen', icon: 'M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z' },
   { id: 'materiales', label: 'Materiales', icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' },
@@ -804,6 +975,7 @@ const PAGES = [
   { id: 'clientes', label: 'Clientes', icon: 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M8.5 7.5a4 4 0 1 1-8 0 4 4 0 0 1 8 0' },
   { id: 'testimonios', label: 'Testimonios', icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z' },
   { id: 'marcas', label: 'Marcas', icon: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01' },
+  { id: 'administradores', label: 'Administradores', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M16 11a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
   { id: 'config', label: 'Configuración', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' },
 ];
 
@@ -914,6 +1086,7 @@ function App() {
             displayCols={[{ key: 'name', label: 'Marca', render: (b) => <b style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{b.name}</b> }]}
           />
         )}
+        {page === 'administradores' && <AdminsPage toast={showToast} />}
         {page === 'config' && <ConfigPage toast={showToast} />}
       </main>
 
