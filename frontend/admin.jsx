@@ -831,6 +831,11 @@ function AdminsPage({ toast }) {
   const loadAdmins = async () => {
     try {
       setLoading(true);
+      if (!window.firebaseAuth) {
+        console.error('Firebase Auth no está inicializado');
+        setLoading(false);
+        return;
+      }
       const token = await window.firebaseAuth.currentUser?.getIdToken();
       if (!token) {
         console.error('No hay token disponible');
@@ -857,6 +862,11 @@ function AdminsPage({ toast }) {
     try {
       setCreating(true);
       setError('');
+      if (!window.firebaseAuth) {
+        setError('Firebase no está inicializado');
+        setCreating(false);
+        return;
+      }
       const token = await window.firebaseAuth.currentUser?.getIdToken();
       if (!token) {
         setError('No autenticado');
@@ -891,6 +901,10 @@ function AdminsPage({ toast }) {
   const deleteAdmin = async (uid) => {
     if (!confirm('¿Eliminar este administrador?')) return;
     try {
+      if (!window.firebaseAuth) {
+        toast('Firebase no está inicializado', 'error');
+        return;
+      }
       const token = await window.firebaseAuth.currentUser?.getIdToken();
       if (!token) {
         toast('No autenticado', 'error');
