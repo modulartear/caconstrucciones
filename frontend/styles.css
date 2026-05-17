@@ -71,7 +71,9 @@ p { text-wrap: pretty; }
 
 /* Utility */
 .container { width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 28px; }
-@media (max-width: 640px) { .container { padding: 0 18px; } }
+@media (max-width: 760px) { .container { padding: 0 24px; } }
+@media (max-width: 640px) { .container { padding: 0 20px; } }
+@media (max-width: 480px) { .container { padding: 0 16px; } }
 
 .kicker {
   display: inline-flex;
