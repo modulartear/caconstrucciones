@@ -3,7 +3,7 @@ const { useState, useEffect, useRef, useCallback } = React;
 // ───────────────────────── Procedural Swatch Generator ─────────────────────────
 
 function generateTexture(canvas, type, baseColor, accentColor) {
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   const w = canvas.width, h = canvas.height;
   ctx.fillStyle = baseColor; ctx.fillRect(0, 0, w, h);
   const imageData = ctx.getImageData(0, 0, w, h);
