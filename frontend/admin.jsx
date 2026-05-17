@@ -802,6 +802,7 @@ const PAGES = [
   { id: 'obras', label: 'Obras', icon: 'M3 21h18M5 21V8l7-5 7 5v13M9 21v-7h6v7' },
   { id: 'presupuestos', label: 'Presupuestos', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8' },
   { id: 'clientes', label: 'Clientes', icon: 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M8.5 7.5a4 4 0 1 1-8 0 4 4 0 0 1 8 0' },
+  { id: 'usuarios', label: 'Usuarios', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z' },
   { id: 'testimonios', label: 'Testimonios', icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z' },
   { id: 'marcas', label: 'Marcas', icon: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01' },
   { id: 'config', label: 'Configuración', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' },
@@ -881,6 +882,23 @@ function App() {
               { key: 'phone', label: 'Teléfono' },
               { key: 'project', label: 'Proyecto' },
               { key: 'since', label: 'Desde', render: (c) => <span style={{ color: 'var(--muted)', fontSize: 13 }}>{c.since}</span> },
+            ]}
+          />
+        )}
+        {page === 'usuarios' && (
+          <SimpleCRUD
+            title="Usuarios Administradores"
+            sub="Gestiona los usuarios que tienen acceso al panel administrativo."
+            storeKey="admins"
+            toast={showToast}
+            fields={[
+              { key: 'username', label: 'Usuario' },
+              { key: 'email', label: 'Email', type: 'email' },
+              { key: 'password', label: 'Contraseña', full: true },
+            ]}
+            displayCols={[
+              { key: 'username', label: 'Usuario', render: (u) => <><b>{u.username}</b><div style={{ color: 'var(--muted)', fontSize: 12 }}>{u.email}</div></> },
+              { key: 'email', label: 'Email' },
             ]}
           />
         )}

@@ -7,6 +7,7 @@
     brands: '/api/firestore-brands',
     budgets: '/api/firestore-budgets',
     clients: '/api/firestore-clients',
+    admins: '/api/firestore-admins',
     site: '/api/firestore-site'
   };
 
@@ -17,6 +18,7 @@
     brands: [],
     budgets: [],
     clients: [],
+    admins: [],
     site: { hero_kicker: '', hero_title: '', hero_sub: '', stats: [], contact: { phone: '', email: '', address: '' } }
   };
 
