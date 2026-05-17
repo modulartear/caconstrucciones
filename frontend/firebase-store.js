@@ -1,71 +1,13 @@
-// CA Construcciones — Firebase Firestore Store
+// CA Construcciones — API Store (datos desde Firestore vía API)
 (function () {
-  const firebaseConfig = {
-    apiKey: "AIzaSyBO9MOo-5rnajXXDFc7TLVEAO_wLf6j5d8",
-    authDomain: "caconstrucciones-454bd.firebaseapp.com",
-    projectId: "caconstrucciones-454bd",
-    storageBucket: "caconstrucciones-454bd.firebasestorage.app",
-    messagingSenderId: "422474273934",
-    appId: "1:422474273934:web:167030583f8223cfe965df"
-  };
-
-  // Cargar Firebase SDK desde CDN
-  function loadFirebaseSDK() {
-    return new Promise((resolve) => {
-      if (window.firebase && window.firebase.firestore) {
-        resolve();
-        return;
-      }
-
-      // Cargar firebase-app
-      const appScript = document.createElement('script');
-      appScript.src = 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
-      appScript.onload = () => {
-        // Cargar firebase-firestore
-        const fsScript = document.createElement('script');
-        fsScript.src = 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
-        fsScript.onload = () => {
-          // Esperar un poco para que se inicialice
-          setTimeout(resolve, 500);
-        };
-        document.head.appendChild(fsScript);
-      };
-      document.head.appendChild(appScript);
-    });
-  }
-
-  let app = null;
-  let db = null;
-  let initialized = false;
-
-  async function initFirebase() {
-    if (initialized) return;
-
-    await loadFirebaseSDK();
-
-    if (!window.firebase) {
-      console.error('Firebase SDK no cargó correctamente');
-      return;
-    }
-
-    try {
-      app = window.firebase.initializeApp(firebaseConfig);
-      db = window.firebase.firestore(app);
-      initialized = true;
-      console.log('✅ Firebase inicializado');
-    } catch (e) {
-      console.error('Error inicializando Firebase:', e);
-    }
-  }
-
-  const collections = {
-    materials: 'materials',
-    projects: 'projects',
-    testimonials: 'testimonials',
-    brands: 'brands',
-    budgets: 'budgets',
-    clients: 'clients',
-    site: 'site'
+  const API_ENDPOINTS = {
+    materials: '/api/firestore-materials',
+    projects: '/api/firestore-projects',
+    testimonials: '/api/firestore-testimonials',
+    brands: '/api/firestore-brands',
+    budgets: '/api/firestore-budgets',
+    clients: '/api/firestore-clients',
+    site: '/api/firestore-site'
   };
 
   const DEFAULT_SEEDS = {
@@ -82,40 +24,25 @@
   const listeners = {};
   const localCache = {};
 
-  async function loadFromFirestore(name) {
+  async function loadFromAPI(name) {
     if (loadingPromises[name]) return loadingPromises[name];
 
     loadingPromises[name] = (async () => {
       try {
-        await initFirebase();
+        const endpoint = API_ENDPOINTS[name];
+        if (!endpoint) return DEFAULT_SEEDS[name] || [];
 
-        if (!db) {
-          console.warn(`Firestore no disponible para ${name}`);
-          return DEFAULT_SEEDS[name] || [];
-        }
-
-        const collectionName = collections[name];
-        if (!collectionName) return DEFAULT_SEEDS[name] || [];
-
-        if (name === 'site') {
-          // Site es un documento único
-          const doc = await db.collection(collectionName).doc('config').get();
-          const data = doc.exists ? doc.data() : DEFAULT_SEEDS[name];
-          localCache[name] = data;
+        const res = await fetch(endpoint);
+        if (res.ok) {
+          const data = await res.json();
+          localCache[name] = Array.isArray(data) ? data : (data || DEFAULT_SEEDS[name]);
           notify(name);
-          return data;
-        } else {
-          // El resto son colecciones
-          const snapshot = await db.collection(collectionName).get();
-          const data = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-          localCache[name] = data;
-          notify(name);
-          return data;
+          return localCache[name];
         }
       } catch (e) {
         console.error(`Error loading ${name}:`, e);
-        return DEFAULT_SEEDS[name] || [];
       }
+      return DEFAULT_SEEDS[name] || [];
     })();
 
     return loadingPromises[name];
@@ -127,55 +54,54 @@
 
   async function saveItem(name, item) {
     try {
-      await initFirebase();
+      const endpoint = API_ENDPOINTS[name];
+      if (!endpoint) return;
 
-      if (!db) {
-        console.error('Firestore no disponible');
-        return;
-      }
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
 
-      const collectionName = collections[name];
-      if (!collectionName) return;
-
-      if (name === 'site') {
-        await db.collection(collectionName).doc('config').set(item, { merge: true });
-      } else {
-        const id = item.id;
-        if (!id) {
-          item.id = uid(name[0]);
+      if (res.ok) {
+        const saved = await res.json();
+        const items = load(name);
+        const idx = items.findIndex(i => i.id === item.id);
+        if (idx >= 0) {
+          items[idx] = saved;
+        } else {
+          items.unshift(saved);
         }
-        await db.collection(collectionName).doc(item.id).set(item, { merge: true });
+        await save(name, items);
+        return saved;
       }
-
-      // Actualizar cache local
-      await loadFromFirestore(name);
-      return item;
     } catch (e) {
       console.error(`Error saving ${name}:`, e);
-      throw e;
     }
   }
 
   async function deleteItem(name, id) {
     try {
-      await initFirebase();
+      const endpoint = API_ENDPOINTS[name];
+      if (!endpoint) return;
 
-      if (!db) {
-        console.error('Firestore no disponible');
-        return;
-      }
+      await fetch(endpoint, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
 
-      const collectionName = collections[name];
-      if (!collectionName) return;
-
-      await db.collection(collectionName).doc(id).delete();
-
-      // Actualizar cache local
-      await loadFromFirestore(name);
+      const items = load(name);
+      const filtered = items.filter(i => i.id !== id);
+      await save(name, filtered);
     } catch (e) {
       console.error(`Error deleting ${name}:`, e);
-      throw e;
     }
+  }
+
+  async function save(name, data) {
+    localCache[name] = data;
+    notify(name);
   }
 
   function on(name, fn) {
@@ -194,28 +120,28 @@
 
   function uid(prefix = 'id') { return prefix + '_' + Math.random().toString(36).slice(2, 9); }
 
-  // Inicializar: cargar todos los datos desde Firestore
+  // Inicializar: cargar todos los datos desde API
   async function init() {
-    console.log('🔄 Inicializando Firebase Store...');
-    for (const name of Object.keys(collections)) {
+    console.log('🔄 Cargando datos de Firestore...');
+    for (const name of Object.keys(API_ENDPOINTS)) {
       try {
-        await loadFromFirestore(name);
+        await loadFromAPI(name);
       } catch (e) {
         console.error(`Error cargando ${name}:`, e);
       }
     }
-    console.log('✅ Firebase Store inicializado');
+    console.log('✅ Datos cargados desde Firestore');
   }
 
   window.CAStore = {
     get: load,
+    set: save,
     saveItem,
     deleteItem,
     on,
     uid,
-    loadFromFirestore,
-    init,
-    initFirebase
+    loadFromAPI,
+    init
   };
 
   // Auto-init on load
