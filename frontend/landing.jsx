@@ -533,19 +533,44 @@ function Footer() {
 }
 
 // ───────────────────────── Login Modal ─────────────────────────
+async function loginWithAPI(username, password) {
+  try {
+    const response = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', username, password })
+    });
+    const data = await response.json();
+    if (response.ok && data.token) {
+      localStorage.setItem('ca_admin_token', data.token);
+      return { success: true };
+    }
+    return { success: false, error: data.error || 'Login failed' };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
 function LoginModal({ onClose, onSuccess }) {
   const [user, setUser] = useState('');
   const [pwd, setPwd] = useState('');
   const [err, setErr] = useState('');
-  const submit = (e) => {
+  const [loading, setLoading] = useState(false);
+  
+  const submit = async (e) => {
     e.preventDefault();
-    if (user === 'Admin' && pwd === '1234') {
-      sessionStorage.setItem('ca_admin', '1');
+    setLoading(true);
+    setErr('');
+    
+    const result = await loginWithAPI(user, pwd);
+    if (result.success) {
       onSuccess();
     } else {
-      setErr('Usuario o contraseña incorrectos.');
+      setErr(result.error || 'Usuario o contraseña incorrectos.');
+      setLoading(false);
     }
   };
+  
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
@@ -560,15 +585,16 @@ function LoginModal({ onClose, onSuccess }) {
         <div style={{ display: 'grid', gap: 14 }}>
           <div>
             <label>Usuario</label>
-            <input autoFocus value={user} onChange={(e) => { setUser(e.target.value); setErr(''); }} placeholder="Admin" />
+            <input autoFocus value={user} onChange={(e) => { setUser(e.target.value); setErr(''); }} placeholder="Usuario o email" disabled={loading} />
           </div>
           <div>
             <label>Contraseña</label>
-            <input type="password" value={pwd} onChange={(e) => { setPwd(e.target.value); setErr(''); }} placeholder="••••" />
+            <input type="password" value={pwd} onChange={(e) => { setPwd(e.target.value); setErr(''); }} placeholder="••••" disabled={loading} />
           </div>
           {err && <div style={{ color: 'var(--danger)', fontSize: 13 }}>{err}</div>}
-          <button className="btn btn-primary" type="submit" style={{ justifyContent: 'center', padding: '14px' }}>Ingresar al panel</button>
-          <div style={{ fontSize: 12, color: 'var(--muted-2)', textAlign: 'center' }}>Demo: <code style={{ color: 'var(--muted)' }}>Admin / 1234</code></div>
+          <button className="btn btn-primary" type="submit" style={{ justifyContent: 'center', padding: '14px' }} disabled={loading}>
+            {loading ? 'Verificando…' : 'Ingresar al panel'}
+          </button>
         </div>
       </form>
     </div>
