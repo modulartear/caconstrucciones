@@ -741,15 +741,35 @@ function SimpleCRUDForm({ title, initial, fields, onClose, onSave }) {
 function ConfigPage({ toast }) {
   const site = useStoreVal('site');
   const [s, setS] = useState(site);
+  const [saving, setSaving] = useState(false);
   useEffect(() => setS(site), [site]);
-  const save = () => { setStore('site', s); toast('Configuración guardada'); };
+  
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/firestore-site', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(s),
+      });
+      if (res.ok) {
+        setStore('site', s);
+        toast('Configuración guardada');
+      }
+    } catch (e) {
+      console.error('Error saving site:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+  
   const resetAll = () => { if (confirm('Restablecer todos los datos a los valores iniciales? Se perderán materiales, obras, presupuestos y clientes personalizados.')) { window.CAStore.reset(); toast('Datos restablecidos'); } };
 
   return (
     <>
       <div className="page-head">
         <div><h1>Configuración</h1><p>Contenido editorial de la landing pública.</p></div>
-        <div className="actions"><button className="btn btn-primary btn-sm" onClick={save}>Guardar cambios</button></div>
+        <div className="actions"><button className="btn btn-primary btn-sm" onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</button></div>
       </div>
 
       <div className="panel" style={{ marginBottom: 18 }}>
