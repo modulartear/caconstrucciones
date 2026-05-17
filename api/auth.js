@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: './backend/.env' });
 
-// Initialize Firebase Admin
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -31,64 +30,41 @@ export default async function handler(req, res) {
 
     // Login action
     if (action === 'login') {
-      console.log('=== LOGIN ATTEMPT ===');
-      console.log('Username/Email:', username);
-      console.log('Password:', password);
-      
-      try {
-        // First try Firestore for admins - search by username OR email
-        let adminDoc = null;
-        let adminData = null;
-        
-        // Get ALL admins to debug
-        const allAdminsSnapshot = await db.collection('admins').get();
-        console.log('Total admins in Firestore:', allAdminsSnapshot.size);
-        allAdminsSnapshot.docs.forEach(doc => {
-          console.log('Admin doc:', doc.id, doc.data());
-        });
-        
-        // Try by username
-        const usernameSnapshot = await db.collection('admins').where('username', '==', username).get();
-        console.log('Username query results:', usernameSnapshot.size);
-        if (!usernameSnapshot.empty) {
-          adminDoc = usernameSnapshot.docs[0];
-          adminData = adminDoc.data();
-          console.log('Admin found by username:', adminData);
-        } else {
-          // Try by email
-          const emailSnapshot = await db.collection('admins').where('email', '==', username).get();
-          console.log('Email query results:', emailSnapshot.size);
-          if (!emailSnapshot.empty) {
-            adminDoc = emailSnapshot.docs[0];
-            adminData = adminDoc.data();
-            console.log('Admin found by email:', adminData);
-          }
+      console.log('Login attempt:', { username, password });
+
+      // Try Firestore first
+      let adminData = null;
+
+      // Check all admins
+      const snapshot = await db.collection('admins').get();
+      console.log('Total admins:', snapshot.size);
+
+      for (const doc of snapshot.docs) {
+        const data = doc.data();
+        console.log('Checking admin:', data);
+
+        if (data.username === username || data.email === username) {
+          adminData = data;
+          console.log('Found matching admin!');
+          break;
         }
-        
-        if (adminData) {
-          console.log('Comparing passwords:');
-          console.log('- Input password:', password);
-          console.log('- Stored password:', adminData.password);
-          console.log('- Match:', adminData.password === password);
-          
-          // Check password (NOTE: In production, you should hash passwords!)
-          if (adminData.password === password) {
-            console.log('Password matches!');
-            return res.status(200).json({
-              success: true,
-              token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
-            });
-          } else {
-            console.log('Password does NOT match');
-          }
-        } else {
-          console.log('No admin found with identifier:', username);
-        }
-      } catch (error) {
-        console.error('Firestore query error:', error);
       }
-      
-      // Fallback to environment variables for backwards compatibility
+
+      if (adminData) {
+        if (adminData.password === password) {
+          console.log('Password matches!');
+          return res.status(200).json({
+            success: true,
+            token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
+          });
+        } else {
+          console.log('Password does not match');
+        }
+      } else {
+        console.log('No admin found in Firestore');
+      }
+
+      // Fallback to env vars
       const adminUser = process.env.ADMIN_USERNAME || 'admin';
       const adminPass = process.env.ADMIN_PASSWORD || '1234';
 
@@ -97,9 +73,9 @@ export default async function handler(req, res) {
           success: true,
           token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
         });
-      } else {
-        return res.status(401).json({ error: 'Credenciales incorrectas' });
       }
+
+      return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
     // Verify token action
@@ -108,14 +84,13 @@ export default async function handler(req, res) {
       if (!token) {
         return res.status(401).json({ error: 'No token provided' });
       }
-      // Simple token validation
       try {
         const decoded = Buffer.from(token, 'base64').toString();
         if (decoded.includes(':')) {
           return res.status(200).json({ success: true });
         }
       } catch (e) {
-        // continue to error
+        // continue
       }
       return res.status(401).json({ error: 'Invalid token' });
     }
