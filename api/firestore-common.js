@@ -11,7 +11,7 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-const collections = {
+const collectionHandlers = {
   materials: {
     async get() {
       const snapshot = await db.collection('materials').get();
@@ -165,47 +165,45 @@ const collections = {
   }
 };
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+export function createHandler(collectionName) {
+  return async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST,PUT,DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  try {
-    const urlParts = req.url.split('/').filter(Boolean);
-    const collection = urlParts[0];
-
-    if (!collection || !collections[collection]) {
-      return res.status(400).json({ error: 'Invalid collection' });
+    if (req.method === 'OPTIONS') {
+      res.status(200).end();
+      return;
     }
 
-    const handlers = collections[collection];
+    try {
+      const handlers = collectionHandlers[collectionName];
+      if (!handlers) {
+        return res.status(400).json({ error: 'Invalid collection' });
+      }
 
-    if (req.method === 'GET') {
-      if (!handlers.get) return res.status(405).json({ error: 'Method not allowed' });
-      const result = await handlers.get();
-      return res.status(200).json(result);
+      if (req.method === 'GET') {
+        if (!handlers.get) return res.status(405).json({ error: 'Method not allowed' });
+        const result = await handlers.get();
+        return res.status(200).json(result);
+      }
+
+      if (req.method === 'POST') {
+        if (!handlers.post) return res.status(405).json({ error: 'Method not allowed' });
+        const result = await handlers.post(req.body);
+        return res.status(201).json(result);
+      }
+
+      if (req.method === 'DELETE') {
+        if (!handlers.delete) return res.status(405).json({ error: 'Method not allowed' });
+        const result = await handlers.delete(req.body);
+        return res.status(200).json(result);
+      }
+
+      res.status(405).json({ error: 'Method not allowed' });
+    } catch (error) {
+      console.error('❌ firestore error:', error);
+      res.status(500).json({ error: error.message });
     }
-
-    if (req.method === 'POST') {
-      if (!handlers.post) return res.status(405).json({ error: 'Method not allowed' });
-      const result = await handlers.post(req.body);
-      return res.status(201).json(result);
-    }
-
-    if (req.method === 'DELETE') {
-      if (!handlers.delete) return res.status(405).json({ error: 'Method not allowed' });
-      const result = await handlers.delete(req.body);
-      return res.status(200).json(result);
-    }
-
-    res.status(405).json({ error: 'Method not allowed' });
-  } catch (error) {
-    console.error('❌ firestore error:', error);
-    res.status(500).json({ error: error.message });
-  }
+  };
 }

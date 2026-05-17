@@ -847,7 +847,7 @@ function ConfigPage({ toast }) {
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/firestore/site', {
+      const res = await fetch('/api/firestore-site', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(s),
