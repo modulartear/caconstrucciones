@@ -105,7 +105,7 @@ function ProceduralSwatch({ material, size = 90, className = '' }) {
   return <canvas ref={ref} className={className} />;
 }
 
-// ───────────────────────── Detection Mejorada (solo frontend) ─────────────────────────
+// ───────────────────────── Detection Simple (solo frontend) ─────────────────────────
 
 function analyzeImage(img, width, height) {
   const tempCanvas = document.createElement('canvas');
@@ -114,195 +114,32 @@ function analyzeImage(img, width, height) {
   const tempCtx = tempCanvas.getContext('2d');
   tempCtx.drawImage(img, 0, 0, width, height);
 
-  const imgData = tempCtx.getImageData(0, 0, width, height);
-  const data = imgData.data;
+  const wallCanvas = document.createElement('canvas');
+  wallCanvas.width = width;
+  wallCanvas.height = height;
+  const wallCtx = wallCanvas.getContext('2d');
+  wallCtx.fillStyle = '#000';
+  wallCtx.fillRect(0, 0, width, height);
 
-  const wallMask = new Uint8Array(width * height);
-  const floorMask = new Uint8Array(width * height);
+  const floorCanvas = document.createElement('canvas');
+  floorCanvas.width = width;
+  floorCanvas.height = height;
+  const floorCtx = floorCanvas.getContext('2d');
+  floorCtx.fillStyle = '#000';
+  floorCtx.fillRect(0, 0, width, height);
 
-  const blockSize = 8;
-  const floorStart = Math.floor(height * 0.55);
+  const floorStart = Math.floor(height * 0.6);
   const wallEnd = Math.floor(height * 0.75);
 
-  let totalR = 0, totalG = 0, totalB = 0, totalPixels = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    totalR += data[i];
-    totalG += data[i + 1];
-    totalB += data[i + 2];
-    totalPixels++;
-  }
+  wallCtx.fillStyle = '#fff';
+  wallCtx.fillRect(width * 0.05, height * 0.05, width * 0.9, wallEnd - height * 0.05);
 
-  for (let by = 0; by < height; by += blockSize) {
-    for (let bx = 0; bx < width; bx += blockSize) {
-      const bh = Math.min(blockSize, height - by);
-      const bw = Math.min(blockSize, width - bx);
-
-      let r = 0, g = 0, b = 0, count = 0;
-      for (let y = by; y < by + bh; y++) {
-        for (let x = bx; x < bx + bw; x++) {
-          const idx = (y * width + x) * 4;
-          r += data[idx];
-          g += data[idx + 1];
-          b += data[idx + 2];
-          count++;
-        }
-      }
-      r /= count; g /= count; b /= count;
-
-      let variance = 0;
-      for (let y = by; y < by + bh; y++) {
-        for (let x = bx; x < bx + bw; x++) {
-          const idx = (y * width + x) * 4;
-          variance += Math.pow(data[idx] - r, 2) + Math.pow(data[idx + 1] - g, 2) + Math.pow(data[idx + 2] - b, 2);
-        }
-      }
-      variance /= count;
-
-      const brightness = (r + g + b) / 3;
-      const maxCh = Math.max(r, g, b);
-      const minCh = Math.min(r, g, b);
-      const saturation = maxCh > 0 ? (maxCh - minCh) / maxCh : 0;
-
-      const isUniform = variance < 800;
-      const isNotTooDark = brightness > 40;
-      const isNotTooSaturated = saturation < 0.6;
-      
-      const isFloorArea = by >= floorStart;
-      const isWallArea = by <= wallEnd && !isFloorArea;
-
-      let wallValue = 0;
-      let floorValue = 0;
-
-      if (isUniform && isNotTooDark && isNotTooSaturated) {
-        if (isFloorArea) {
-          floorValue = 1;
-        } else if (isWallArea) {
-          wallValue = 1;
-        }
-      }
-
-      for (let y = by; y < by + bh; y++) {
-        for (let x = bx; x < bx + bw; x++) {
-          const idx = y * width + x;
-          wallMask[idx] = wallValue;
-          floorMask[idx] = floorValue;
-        }
-      }
-    }
-  }
-
-  const dilate = (arr, times = 2) => {
-    let result = new Uint8Array(arr);
-    for (let t = 0; t < times; t++) {
-      const temp = new Uint8Array(result);
-      for (let y = 2; y < height - 2; y++) {
-        for (let x = 2; x < width - 2; x++) {
-          const idx = y * width + x;
-          const neighbors = [
-            result[(y - 2) * width + x],
-            result[(y - 1) * width + x],
-            result[(y + 1) * width + x],
-            result[(y + 2) * width + x],
-            result[y * width + (x - 2)],
-            result[y * width + (x - 1)],
-            result[y * width + (x + 1)],
-            result[y * width + (x + 2)],
-            result[(y - 1) * width + (x - 1)],
-            result[(y - 1) * width + (x + 1)],
-            result[(y + 1) * width + (x - 1)],
-            result[(y + 1) * width + (x + 1)]
-          ];
-          if (neighbors.filter(n => n).length >= 5) temp[idx] = 1;
-        }
-      }
-      result = temp;
-    }
-    return result;
-  };
-
-  const erode = (arr, times = 1) => {
-    let result = new Uint8Array(arr);
-    for (let t = 0; t < times; t++) {
-      const temp = new Uint8Array(result);
-      for (let y = 1; y < height - 1; y++) {
-        for (let x = 1; x < width - 1; x++) {
-          const idx = y * width + x;
-          const neighbors = [
-            result[(y - 1) * width + x],
-            result[(y + 1) * width + x],
-            result[y * width + (x - 1)],
-            result[y * width + (x + 1)],
-            result[idx]
-          ];
-          if (!neighbors.every(n => n)) temp[idx] = 0;
-        }
-      }
-      result = temp;
-    }
-    return result;
-  };
-
-  const fillHoles = (arr) => {
-    let result = new Uint8Array(arr);
-    for (let y = 1; y < height - 1; y++) {
-      for (let x = 1; x < width - 1; x++) {
-        const idx = y * width + x;
-        if (result[idx] === 0) {
-          const neighbors = [
-            result[(y - 1) * width + x],
-            result[(y + 1) * width + x],
-            result[y * width + (x - 1)],
-            result[y * width + (x + 1)]
-          ];
-          if (neighbors.every(n => n === 1)) {
-            result[idx] = 1;
-          }
-        }
-      }
-    }
-    return result;
-  };
-
-  let processedWalls = dilate(wallMask, 4);
-  processedWalls = erode(processedWalls, 2);
-  processedWalls = fillHoles(processedWalls);
-  processedWalls = dilate(processedWalls, 2);
-  
-  let processedFloors = dilate(floorMask, 3);
-  processedFloors = erode(processedFloors, 1);
-  processedFloors = fillHoles(processedFloors);
-  processedFloors = dilate(processedFloors, 2);
-
-  for (let y = floorStart; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = y * width + x;
-      if (processedFloors[idx]) {
-        processedWalls[idx] = 0;
-      }
-    }
-  }
-
-  const maskToCanvas = (mask) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(width, height);
-    for (let i = 0; i < width * height; i++) {
-      const idx = i * 4;
-      const val = mask[i] ? 255 : 0;
-      imgData.data[idx] = val;
-      imgData.data[idx + 1] = val;
-      imgData.data[idx + 2] = val;
-      imgData.data[idx + 3] = 255;
-    }
-    ctx.putImageData(imgData, 0, 0);
-    return canvas;
-  };
+  floorCtx.fillStyle = '#fff';
+  floorCtx.fillRect(width * 0.05, floorStart, width * 0.9, height - floorStart - height * 0.05);
 
   return {
-    walls: maskToCanvas(processedWalls),
-    floors: maskToCanvas(processedFloors)
+    walls: wallCanvas,
+    floors: floorCanvas
   };
 }
 
