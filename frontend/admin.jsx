@@ -76,9 +76,17 @@ function ConfirmDel({ name, onClose, onConfirm }) {
   );
 }
 
-function PhotoInput({ value, onChange, hint = 'Subí una foto' }) {
+function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2 }) {
+  const [err, setErr] = useState(null);
   const onFile = (file) => {
     if (!file) return;
+    setErr(null);
+    
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      setErr(`El archivo es demasiado grande (máximo ${maxSizeMB}MB)`);
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onload = (e) => onChange(e.target.result);
     reader.readAsDataURL(file);
@@ -93,10 +101,11 @@ function PhotoInput({ value, onChange, hint = 'Subí una foto' }) {
       ) : (
         <>
           <div style={{ fontSize: 13 }}>{hint}</div>
-          <div style={{ fontSize: 11, marginTop: 4, color: 'var(--muted-2)' }}>JPG / PNG / WebP</div>
+          <div style={{ fontSize: 11, marginTop: 4, color: 'var(--muted-2)' }}>JPG / PNG / WebP (máx {maxSizeMB}MB)</div>
           <input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} />
         </>
       )}
+      {err && <div style={{ color: 'var(--danger)', fontSize: 12, marginTop: 8 }}>{err}</div>}
     </div>
   );
 }

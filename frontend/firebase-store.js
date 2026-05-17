@@ -37,7 +37,13 @@
         const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
-          localCache[name] = Array.isArray(data) ? data : (data || DEFAULT_SEEDS[name]);
+          if (Array.isArray(data)) {
+            localCache[name] = data;
+          } else if (data) {
+            localCache[name] = { ...DEFAULT_SEEDS[name], ...data };
+          } else {
+            localCache[name] = DEFAULT_SEEDS[name];
+          }
           notify(name);
           return localCache[name];
         }
