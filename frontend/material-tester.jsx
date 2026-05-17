@@ -195,7 +195,7 @@ function ProceduralSwatch({ material, size = 200, className = '' }) {
   return <canvas ref={ref} className={className} />;
 }
 
-// ───────────────────────── Detection ─────────────────────────
+// ───────────────────────── Detection Mejorada ─────────────────────────
 
 function analyzeImage(img, width, height) {
   const tempCanvas = document.createElement('canvas');
@@ -210,9 +210,24 @@ function analyzeImage(img, width, height) {
   const wallMask = new Uint8Array(width * height);
   const floorMask = new Uint8Array(width * height);
 
-  const blockSize = 10;
-  const bottomThird = Math.floor(height * 0.65);
+  // Paso 1: Calcular estadísticas generales de la imagen
+  let totalR = 0, totalG = 0, totalB = 0, totalPixels = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    totalR += data[i];
+    totalG += data[i + 1];
+    totalB += data[i + 2];
+    totalPixels++;
+  }
+  const avgR = totalR / totalPixels;
+  const avgG = totalG / totalPixels;
+  const avgB = totalB / totalPixels;
 
+  const blockSize = 8;
+  const floorStart = Math.floor(height * 0.55);
+  const floorEnd = height;
+  const wallEnd = Math.floor(height * 0.75);
+
+  // Paso 2: Analizar cada bloque
   for (let by = 0; by < height; by += blockSize) {
     for (let bx = 0; bx < width; bx += blockSize) {
       const bh = Math.min(blockSize, height - by);
@@ -240,20 +255,28 @@ function analyzeImage(img, width, height) {
       variance /= count;
 
       const brightness = (r + g + b) / 3;
-      const isUniform = variance < 600 && brightness > 60;
-      const isFloorArea = by > bottomThird;
+      const saturation = (Math.max(r, g, b) - Math.min(r, g, b)) / 255;
+
+      // Criterios mejorados
+      const isUniform = variance < 800;
+      const isNotTooDark = brightness > 40;
+      const isNotTooSaturated = saturation < 0.6;
+      
+      const isFloorArea = by >= floorStart && by <= floorEnd;
+      const isWallArea = by <= wallEnd && !isFloorArea;
 
       let wallValue = 0;
       let floorValue = 0;
 
-      if (isUniform) {
+      if (isUniform && isNotTooDark && isNotTooSaturated) {
         if (isFloorArea) {
           floorValue = 1;
-        } else {
+        } else if (isWallArea) {
           wallValue = 1;
         }
       }
 
+      // Llenar el bloque
       for (let y = by; y < by + bh; y++) {
         for (let x = bx; x < bx + bw; x++) {
           const idx = y * width + x;
@@ -264,20 +287,29 @@ function analyzeImage(img, width, height) {
     }
   }
 
+  // Paso 3: Operaciones morfológicas mejoradas
   const dilate = (arr, times = 2) => {
     let result = new Uint8Array(arr);
     for (let t = 0; t < times; t++) {
       const temp = new Uint8Array(result);
-      for (let y = 1; y < height - 1; y++) {
-        for (let x = 1; x < width - 1; x++) {
+      for (let y = 2; y < height - 2; y++) {
+        for (let x = 2; x < width - 2; x++) {
           const idx = y * width + x;
           const neighbors = [
+            result[(y - 2) * width + x],
             result[(y - 1) * width + x],
             result[(y + 1) * width + x],
+            result[(y + 2) * width + x],
+            result[y * width + (x - 2)],
             result[y * width + (x - 1)],
-            result[y * width + (x + 1)]
+            result[y * width + (x + 1)],
+            result[y * width + (x + 2)],
+            result[(y - 1) * width + (x - 1)],
+            result[(y - 1) * width + (x + 1)],
+            result[(y + 1) * width + (x - 1)],
+            result[(y + 1) * width + (x + 1)]
           ];
-          if (neighbors.some(n => n)) temp[idx] = 1;
+          if (neighbors.filter(n => n).length >= 5) temp[idx] = 1;
         }
       }
       result = temp;
@@ -307,11 +339,46 @@ function analyzeImage(img, width, height) {
     return result;
   };
 
-  let processedWalls = dilate(wallMask, 3);
-  processedWalls = erode(processedWalls, 1);
+  const fillHoles = (arr) => {
+    let result = new Uint8Array(arr);
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const idx = y * width + x;
+        if (result[idx] === 0) {
+          const neighbors = [
+            result[(y - 1) * width + x],
+            result[(y + 1) * width + x],
+            result[y * width + (x - 1)],
+            result[y * width + (x + 1)]
+          ];
+          if (neighbors.every(n => n === 1)) {
+            result[idx] = 1;
+          }
+        }
+      }
+    }
+    return result;
+  };
+
+  let processedWalls = dilate(wallMask, 4);
+  processedWalls = erode(processedWalls, 2);
+  processedWalls = fillHoles(processedWalls);
+  processedWalls = dilate(processedWalls, 2);
   
-  let processedFloors = dilate(floorMask, 2);
+  let processedFloors = dilate(floorMask, 3);
   processedFloors = erode(processedFloors, 1);
+  processedFloors = fillHoles(processedFloors);
+  processedFloors = dilate(processedFloors, 2);
+
+  // Paso 4: Eliminar solapamiento (pisos tienen prioridad en su área)
+  for (let y = floorStart; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      if (processedFloors[idx]) {
+        processedWalls[idx] = 0;
+      }
+    }
+  }
 
   const maskToCanvas = (mask) => {
     const canvas = document.createElement('canvas');
@@ -586,6 +653,24 @@ function MaterialTester() {
     mctx.clearRect(0, 0, maskRef.current.width, maskRef.current.height);
     composite();
   };
+
+  const reDetect = async () => {
+    if (!photo) return;
+    
+    const { walls, floors } = analyzeImage(photo, canvasRef.current.width, canvasRef.current.height);
+    
+    const wallCtx = walls.getContext('2d');
+    const wallData = wallCtx.getImageData(0, 0, walls.width, walls.height);
+    const wallMaskCtx = wallMaskRef.current.getContext('2d');
+    wallMaskCtx.putImageData(wallData, 0, 0);
+
+    const floorCtx = floors.getContext('2d');
+    const floorData = floorCtx.getImageData(0, 0, floors.width, floors.height);
+    const floorMaskCtx = floorMaskRef.current.getContext('2d');
+    floorMaskCtx.putImageData(floorData, 0, 0);
+
+    composite();
+  };
   const fillAll = () => {
     const maskRef = getActiveMaskRef();
     const mctx = maskRef.current.getContext('2d');
@@ -725,6 +810,7 @@ function MaterialTester() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 20H7L3 16a2 2 0 0 1 0-2.8L13.2 3 21 10.8a2 2 0 0 1 0 2.8L14 21"/></svg>
                 Remover
               </button>
+              <button className="tool-btn" onClick={reDetect} disabled={!photo}>🔄 Re-detectar</button>
               <button className="tool-btn" onClick={resetMask} disabled={!photo}>Limpiar</button>
             </div>
             <div style={{ marginTop: 14 }}>
