@@ -9,34 +9,54 @@
     appId: "1:422474273934:web:167030583f8223cfe965df"
   };
 
-  // Importar Firebase desde CDN
-  const script = document.createElement('script');
-  script.src = 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
-  document.head.appendChild(script);
+  // Cargar Firebase SDK desde CDN
+  function loadFirebaseSDK() {
+    return new Promise((resolve) => {
+      if (window.firebase && window.firebase.firestore) {
+        resolve();
+        return;
+      }
 
-  const scriptFirestore = document.createElement('script');
-  scriptFirestore.src = 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
-  document.head.appendChild(scriptFirestore);
+      // Cargar firebase-app
+      const appScript = document.createElement('script');
+      appScript.src = 'https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js';
+      appScript.onload = () => {
+        // Cargar firebase-firestore
+        const fsScript = document.createElement('script');
+        fsScript.src = 'https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js';
+        fsScript.onload = () => {
+          // Esperar un poco para que se inicialice
+          setTimeout(resolve, 500);
+        };
+        document.head.appendChild(fsScript);
+      };
+      document.head.appendChild(appScript);
+    });
+  }
 
   let app = null;
   let db = null;
   let initialized = false;
 
-  // Esperar a que Firebase cargue
-  const initFirebase = async () => {
-    await new Promise((resolve) => {
-      const check = setInterval(() => {
-        if (window.firebase) {
-          clearInterval(check);
-          resolve();
-        }
-      }, 100);
-    });
+  async function initFirebase() {
+    if (initialized) return;
 
-    app = window.firebase.initializeApp(firebaseConfig);
-    db = window.firebase.firestore(app);
-    initialized = true;
-  };
+    await loadFirebaseSDK();
+
+    if (!window.firebase) {
+      console.error('Firebase SDK no cargó correctamente');
+      return;
+    }
+
+    try {
+      app = window.firebase.initializeApp(firebaseConfig);
+      db = window.firebase.firestore(app);
+      initialized = true;
+      console.log('✅ Firebase inicializado');
+    } catch (e) {
+      console.error('Error inicializando Firebase:', e);
+    }
+  }
 
   const collections = {
     materials: 'materials',
@@ -62,18 +82,17 @@
   const listeners = {};
   const localCache = {};
 
-  async function ensureInitialized() {
-    if (!initialized) {
-      await initFirebase();
-    }
-  }
-
   async function loadFromFirestore(name) {
     if (loadingPromises[name]) return loadingPromises[name];
 
     loadingPromises[name] = (async () => {
       try {
-        await ensureInitialized();
+        await initFirebase();
+
+        if (!db) {
+          console.warn(`Firestore no disponible para ${name}`);
+          return DEFAULT_SEEDS[name] || [];
+        }
 
         const collectionName = collections[name];
         if (!collectionName) return DEFAULT_SEEDS[name] || [];
@@ -108,7 +127,12 @@
 
   async function saveItem(name, item) {
     try {
-      await ensureInitialized();
+      await initFirebase();
+
+      if (!db) {
+        console.error('Firestore no disponible');
+        return;
+      }
 
       const collectionName = collections[name];
       if (!collectionName) return;
@@ -134,7 +158,12 @@
 
   async function deleteItem(name, id) {
     try {
-      await ensureInitialized();
+      await initFirebase();
+
+      if (!db) {
+        console.error('Firestore no disponible');
+        return;
+      }
 
       const collectionName = collections[name];
       if (!collectionName) return;
@@ -167,9 +196,15 @@
 
   // Inicializar: cargar todos los datos desde Firestore
   async function init() {
+    console.log('🔄 Inicializando Firebase Store...');
     for (const name of Object.keys(collections)) {
-      await loadFromFirestore(name);
+      try {
+        await loadFromFirestore(name);
+      } catch (e) {
+        console.error(`Error cargando ${name}:`, e);
+      }
     }
+    console.log('✅ Firebase Store inicializado');
   }
 
   window.CAStore = {
@@ -180,7 +215,7 @@
     uid,
     loadFromFirestore,
     init,
-    ensureInitialized
+    initFirebase
   };
 
   // Auto-init on load
