@@ -29,6 +29,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      console.log('firestore-admins POST received:', req.body);
       const { id, username, email, password, createdAt, createdBy } = req.body;
 
       if (!username && !email) {
@@ -48,6 +49,7 @@ export default async function handler(req, res) {
         createdBy: createdBy || 'system',
       };
 
+      console.log('Saving admin to Firestore:', data);
       await db.collection('admins').doc(docId).set(data, { merge: true });
       return res.status(201).json(data);
     }
