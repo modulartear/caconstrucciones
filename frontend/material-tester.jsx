@@ -1,3 +1,5 @@
+const { useState, useEffect, useRef, useCallback } = React;
+
 // ───────────────────────── Procedural Swatch Generator ─────────────────────────
 
 function generateTexture(canvas, type, baseColor, accentColor) {
