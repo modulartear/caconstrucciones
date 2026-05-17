@@ -526,6 +526,51 @@ function ObrasPage({ toast }) {
   );
 }
 
+function GalleryInput({ value = [], onChange, max = 6 }) {
+  const addPhoto = (photoUrl) => {
+    if (value.length >= max) return;
+    onChange([...value, photoUrl]);
+  };
+  const removePhoto = (index) => {
+    const newGallery = value.filter((_, i) => i !== index);
+    onChange(newGallery);
+  };
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>{value.length}/{max} fotos</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        {Array.from({ length: max }).map((_, index) => {
+          const photo = value[index];
+          return (
+            <div key={index} className={`photo-upload ${photo ? 'has-image' : ''}`} style={{ aspectRatio: '1', minHeight: 120 }}>
+              {photo ? (
+                <>
+                  <img src={photo} alt="" style={{ objectFit: 'cover' }} />
+                  <button type="button" className="remove" onClick={(e) => { e.preventDefault(); removePhoto(index); }}>Quitar</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 13 }}>Foto {index + 1}</div>
+                  <div style={{ fontSize: 11, marginTop: 4, color: 'var(--muted-2)' }}>JPG / PNG / WebP</div>
+                  <input type="file" accept="image/*" disabled={value.length >= max} onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => addPhoto(ev.target.result);
+                    reader.readAsDataURL(file);
+                  }} />
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ObraForm({ initial, onClose, onSave }) {
   const [p, setP] = useState({
     title: '', location: '', status: 'en-proceso', surface: 0, year: new Date().getFullYear(),
@@ -555,6 +600,9 @@ function ObraForm({ initial, onClose, onSave }) {
         <div className="full"><label>Descripción</label><textarea rows="3" value={p.description} onChange={(e) => setP({ ...p, description: e.target.value })}></textarea></div>
         <div className="full"><label>Foto de portada</label><PhotoInput value={p.cover} onChange={(v) => setP({ ...p, cover: v })} hint="Subí la foto principal" /></div>
         <div className="full" style={{ fontSize: 12, color: 'var(--muted)' }}>O pegá una URL: <input value={typeof p.cover === 'string' && p.cover.startsWith('http') ? p.cover : ''} onChange={(e) => setP({ ...p, cover: e.target.value })} placeholder="https://…" style={{ marginTop: 6 }} /></div>
+        <div className="full"><label>Galería de fotos (hasta 6)</label>
+          <GalleryInput value={p.gallery} onChange={(gallery) => setP({ ...p, gallery })} max={6} />
+        </div>
         <div className="full" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 8 }}>
           <button type="button" className="btn" onClick={onClose}>Cancelar</button>
           <button type="submit" className="btn btn-primary">{p.id ? 'Guardar cambios' : 'Crear obra'}</button>
