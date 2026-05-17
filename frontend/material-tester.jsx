@@ -81,20 +81,18 @@ function MaterialTester() {
         body: JSON.stringify({ imageBase64, materialType })
       });
 
-      if (!response.ok) {
-        throw new Error('Error en la API');
-      }
-
       const data = await response.json();
       
       if (data.success && data.outputUrl) {
         setOutputImage(data.outputUrl);
+      } else if (data.fallbackMode) {
+        alert('⚠️ Probador de IA no disponible: REPLICATE_API_TOKEN no está configurado en Vercel.');
       } else {
-        throw new Error('No se generó la imagen');
+        throw new Error(data.error || 'No se generó la imagen');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Hubo un error al generar la imagen. Asegúrate de tener configurado REPLICATE_API_TOKEN.');
+      alert('Hubo un error al generar la imagen. ' + (error.message || 'Intenta nuevamente.'));
     } finally {
       setLoading(false);
     }
