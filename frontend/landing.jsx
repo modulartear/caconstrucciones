@@ -605,7 +605,7 @@ function LoginModal({ onClose, onSuccess }) {
 function App() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const site = useStoreVal('site');
+  const site = useStore('site');
 
   return (
     <>
