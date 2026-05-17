@@ -195,9 +195,9 @@ function ProceduralSwatch({ material, size = 200, className = '' }) {
   return <canvas ref={ref} className={className} />;
 }
 
-// ───────────────────────── Wall Detection ─────────────────────────
+// ───────────────────────── Detection ─────────────────────────
 
-function detectWalls(img, width, height) {
+function analyzeImage(img, width, height) {
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = width;
   tempCanvas.height = height;
@@ -207,11 +207,12 @@ function detectWalls(img, width, height) {
   const imgData = tempCtx.getImageData(0, 0, width, height);
   const data = imgData.data;
 
-  // Crear máscara: 1 = pared, 0 = no pared
-  const mask = new Uint8Array(width * height);
+  const wallMask = new Uint8Array(width * height);
+  const floorMask = new Uint8Array(width * height);
 
-  // Analizar uniformidad de color - áreas uniformes son típicamente paredes
-  const blockSize = 12;
+  const blockSize = 10;
+  const bottomThird = Math.floor(height * 0.65);
+
   for (let by = 0; by < height; by += blockSize) {
     for (let bx = 0; bx < width; bx += blockSize) {
       const bh = Math.min(blockSize, height - by);
@@ -229,7 +230,6 @@ function detectWalls(img, width, height) {
       }
       r /= count; g /= count; b /= count;
 
-      // Varianza de colores
       let variance = 0;
       for (let y = by; y < by + bh; y++) {
         for (let x = bx; x < bx + bw; x++) {
@@ -239,19 +239,31 @@ function detectWalls(img, width, height) {
       }
       variance /= count;
 
-      // Baja varianza = color uniforme = probablemente pared
-      const isWall = variance < 400 && (r + g + b) / 3 > 70;
-      const blockValue = isWall ? 1 : 0;
+      const brightness = (r + g + b) / 3;
+      const isUniform = variance < 600 && brightness > 60;
+      const isFloorArea = by > bottomThird;
+
+      let wallValue = 0;
+      let floorValue = 0;
+
+      if (isUniform) {
+        if (isFloorArea) {
+          floorValue = 1;
+        } else {
+          wallValue = 1;
+        }
+      }
 
       for (let y = by; y < by + bh; y++) {
         for (let x = bx; x < bx + bw; x++) {
-          mask[y * width + x] = blockValue;
+          const idx = y * width + x;
+          wallMask[idx] = wallValue;
+          floorMask[idx] = floorValue;
         }
       }
     }
   }
 
-  // Dilatación + erosión para suavizar y conectar áreas
   const dilate = (arr, times = 2) => {
     let result = new Uint8Array(arr);
     for (let t = 0; t < times; t++) {
@@ -295,34 +307,44 @@ function detectWalls(img, width, height) {
     return result;
   };
 
-  let processed = dilate(mask, 2);
-  processed = erode(processed, 1);
+  let processedWalls = dilate(wallMask, 3);
+  processedWalls = erode(processedWalls, 1);
+  
+  let processedFloors = dilate(floorMask, 2);
+  processedFloors = erode(processedFloors, 1);
 
-  // Convertir a canvas blanco/negro para la máscara
-  const wallCanvas = document.createElement('canvas');
-  wallCanvas.width = width;
-  wallCanvas.height = height;
-  const wallCtx = wallCanvas.getContext('2d');
-  const wallImgData = wallCtx.createImageData(width, height);
+  const maskToCanvas = (mask) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(width, height);
+    for (let i = 0; i < width * height; i++) {
+      const idx = i * 4;
+      const val = mask[i] ? 255 : 0;
+      imgData.data[idx] = val;
+      imgData.data[idx + 1] = val;
+      imgData.data[idx + 2] = val;
+      imgData.data[idx + 3] = 255;
+    }
+    ctx.putImageData(imgData, 0, 0);
+    return canvas;
+  };
 
-  for (let i = 0; i < width * height; i++) {
-    const idx = i * 4;
-    const val = processed[i] ? 255 : 0;
-    wallImgData.data[idx] = val;
-    wallImgData.data[idx + 1] = val;
-    wallImgData.data[idx + 2] = val;
-    wallImgData.data[idx + 3] = 255;
-  }
-  wallCtx.putImageData(wallImgData, 0, 0);
-  return wallCanvas;
+  return {
+    walls: maskToCanvas(processedWalls),
+    floors: maskToCanvas(processedFloors)
+  };
 }
 
 // ───────────────────────── MaterialTester (main) ─────────────────────────
 
 function MaterialTester() {
   const [materials, setMaterials] = useState(() => window.CAStore.get('materials'));
-  const [selectedId, setSelectedId] = useState(() => window.CAStore.get('materials')[0]?.id);
+  const [selectedWallId, setSelectedWallId] = useState(() => window.CAStore.get('materials')[0]?.id);
+  const [selectedFloorId, setSelectedFloorId] = useState(() => window.CAStore.get('materials')[0]?.id);
   const [photo, setPhoto] = useState(null);
+  const [activeSurface, setActiveSurface] = useState('walls');
   const [mode, setMode] = useState('paint');
   const [brushSize, setBrushSize] = useState(70);
   const [intensity, setIntensity] = useState(0.78);
@@ -330,42 +352,60 @@ function MaterialTester() {
   const [dragging, setDragging] = useState(false);
 
   const canvasRef = useRef(null);
-  const maskRef = useRef(null);
-  const patternRef = useRef(null);
+  const wallMaskRef = useRef(null);
+  const floorMaskRef = useRef(null);
+  const wallPatternRef = useRef(null);
+  const floorPatternRef = useRef(null);
   const drawing = useRef(false);
   const lastPt = useRef(null);
 
   if (!canvasRef.current && typeof document !== 'undefined') {
     canvasRef.current = document.createElement('canvas');
   }
-  if (!maskRef.current) maskRef.current = document.createElement('canvas');
-  if (!patternRef.current) patternRef.current = document.createElement('canvas');
+  if (!wallMaskRef.current) wallMaskRef.current = document.createElement('canvas');
+  if (!floorMaskRef.current) floorMaskRef.current = document.createElement('canvas');
+  if (!wallPatternRef.current) wallPatternRef.current = document.createElement('canvas');
+  if (!floorPatternRef.current) floorPatternRef.current = document.createElement('canvas');
 
   useEffect(() => window.CAStore.on('materials', (m) => {
     setMaterials(m);
-    if (!m.find((x) => x.id === selectedId)) setSelectedId(m[0]?.id);
-  }), [selectedId]);
+    if (!m.find((x) => x.id === selectedWallId)) setSelectedWallId(m[0]?.id);
+    if (!m.find((x) => x.id === selectedFloorId)) setSelectedFloorId(m[0]?.id);
+  }), [selectedWallId, selectedFloorId]);
 
-  const selected = materials.find((m) => m.id === selectedId);
+  const selectedWall = materials.find((m) => m.id === selectedWallId);
+  const selectedFloor = materials.find((m) => m.id === selectedFloorId);
 
-  // Build / refresh material pattern
+  const buildPattern = (material, patternCanvas) => {
+    return new Promise((resolve) => {
+      patternCanvas.width = 300;
+      patternCanvas.height = 300;
+      if (material.photo) {
+        const img = new Image();
+        img.onload = () => {
+          const ctx = patternCanvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, patternCanvas.width, patternCanvas.height);
+          resolve();
+        };
+        img.src = material.photo;
+      } else {
+        generateTexture(patternCanvas, material.texture, material.color, material.accent);
+        resolve();
+      }
+    });
+  };
+
   useEffect(() => {
-    if (!selected) return;
-    const p = patternRef.current;
-    p.width = 220; p.height = 220;
-    if (selected.photo) {
-      const img = new Image();
-      img.onload = () => {
-        const ctx = p.getContext('2d');
-        ctx.drawImage(img, 0, 0, p.width, p.height);
-        composite();
-      };
-      img.src = selected.photo;
-    } else {
-      generateTexture(p, selected.texture, selected.color, selected.accent);
-      composite();
+    if (selectedWall) {
+      buildPattern(selectedWall, wallPatternRef.current).then(composite);
     }
-  }, [selectedId, selected?.color, selected?.accent, selected?.texture, selected?.photo]);
+  }, [selectedWallId, selectedWall?.color, selectedWall?.accent, selectedWall?.texture, selectedWall?.photo]);
+
+  useEffect(() => {
+    if (selectedFloor) {
+      buildPattern(selectedFloor, floorPatternRef.current).then(composite);
+    }
+  }, [selectedFloorId, selectedFloor?.color, selectedFloor?.accent, selectedFloor?.texture, selectedFloor?.photo]);
 
   const composite = useCallback(() => {
     if (!photo || !canvasRef.current) return;
@@ -375,27 +415,33 @@ function MaterialTester() {
     ctx.globalAlpha = 1;
     ctx.drawImage(photo, 0, 0, canvas.width, canvas.height);
     if (comparing) return;
-    // overlay = pattern repeated, masked
-    const ov = document.createElement('canvas');
-    ov.width = canvas.width;
-    ov.height = canvas.height;
-    const octx = ov.getContext('2d');
-    const pat = octx.createPattern(patternRef.current, 'repeat');
-    octx.fillStyle = pat;
-    octx.fillRect(0, 0, ov.width, ov.height);
-    octx.globalCompositeOperation = 'destination-in';
-    octx.drawImage(maskRef.current, 0, 0);
-    // multiply blend preserves lighting/shadow of the photo
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.globalAlpha = intensity;
-    ctx.drawImage(ov, 0, 0);
-    // soft second pass at low alpha for a more painted feel
-    ctx.globalCompositeOperation = 'overlay';
-    ctx.globalAlpha = intensity * 0.22;
-    ctx.drawImage(ov, 0, 0);
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = 1;
-  }, [photo, intensity, comparing]);
+
+    const applyMaterial = (patternCanvas, maskCanvas) => {
+      const ov = document.createElement('canvas');
+      ov.width = canvas.width;
+      ov.height = canvas.height;
+      const octx = ov.getContext('2d');
+      const pat = octx.createPattern(patternCanvas, 'repeat');
+      octx.fillStyle = pat;
+      octx.fillRect(0, 0, ov.width, ov.height);
+      octx.globalCompositeOperation = 'destination-in';
+      octx.drawImage(maskCanvas, 0, 0);
+      
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = intensity;
+      ctx.drawImage(ov, 0, 0);
+      
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = intensity * 0.22;
+      ctx.drawImage(ov, 0, 0);
+      
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    };
+
+    if (selectedWall) applyMaterial(wallPatternRef.current, wallMaskRef.current);
+    if (selectedFloor) applyMaterial(floorPatternRef.current, floorMaskRef.current);
+  }, [photo, intensity, comparing, selectedWall, selectedFloor]);
 
   useEffect(() => { composite(); }, [composite]);
 
@@ -404,8 +450,8 @@ function MaterialTester() {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
-      img.onload = () => {
-        if (!canvasRef.current || !maskRef.current) {
+      img.onload = async () => {
+        if (!canvasRef.current || !wallMaskRef.current || !floorMaskRef.current) {
           console.error('Canvas refs not ready');
           return;
         }
@@ -418,15 +464,22 @@ function MaterialTester() {
         h = Math.round(h * ratio);
         canvasRef.current.width = w;
         canvasRef.current.height = h;
-        maskRef.current.width = w;
-        maskRef.current.height = h;
+        wallMaskRef.current.width = w;
+        wallMaskRef.current.height = h;
+        floorMaskRef.current.width = w;
+        floorMaskRef.current.height = h;
 
-        // Detectar paredes automáticamente
-        const wallCanvas = detectWalls(img, w, h);
-        const wallCtx = wallCanvas.getContext('2d');
+        const { walls, floors } = analyzeImage(img, w, h);
+        
+        const wallCtx = walls.getContext('2d');
         const wallData = wallCtx.getImageData(0, 0, w, h);
-        const maskCtx = maskRef.current.getContext('2d');
-        maskCtx.putImageData(wallData, 0, 0);
+        const wallMaskCtx = wallMaskRef.current.getContext('2d');
+        wallMaskCtx.putImageData(wallData, 0, 0);
+
+        const floorCtx = floors.getContext('2d');
+        const floorData = floorCtx.getImageData(0, 0, w, h);
+        const floorMaskCtx = floorMaskRef.current.getContext('2d');
+        floorMaskCtx.putImageData(floorData, 0, 0);
 
         setPhoto(img);
       };
@@ -438,8 +491,8 @@ function MaterialTester() {
   const loadDemo = () => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      if (!canvasRef.current || !maskRef.current) {
+    img.onload = async () => {
+      if (!canvasRef.current || !wallMaskRef.current || !floorMaskRef.current) {
         console.error('Canvas refs not ready');
         return;
       }
@@ -452,15 +505,22 @@ function MaterialTester() {
       h = Math.round(h * ratio);
       canvasRef.current.width = w;
       canvasRef.current.height = h;
-      maskRef.current.width = w;
-      maskRef.current.height = h;
+      wallMaskRef.current.width = w;
+      wallMaskRef.current.height = h;
+      floorMaskRef.current.width = w;
+      floorMaskRef.current.height = h;
 
-      // Detectar paredes automáticamente
-      const wallCanvas = detectWalls(img, w, h);
-      const wallCtx = wallCanvas.getContext('2d');
+      const { walls, floors } = analyzeImage(img, w, h);
+      
+      const wallCtx = walls.getContext('2d');
       const wallData = wallCtx.getImageData(0, 0, w, h);
-      const maskCtx = maskRef.current.getContext('2d');
-      maskCtx.putImageData(wallData, 0, 0);
+      const wallMaskCtx = wallMaskRef.current.getContext('2d');
+      wallMaskCtx.putImageData(wallData, 0, 0);
+
+      const floorCtx = floors.getContext('2d');
+      const floorData = floorCtx.getImageData(0, 0, w, h);
+      const floorMaskCtx = floorMaskRef.current.getContext('2d');
+      floorMaskCtx.putImageData(floorData, 0, 0);
 
       setPhoto(img);
     };
@@ -476,7 +536,10 @@ function MaterialTester() {
     };
   };
 
+  const getActiveMaskRef = () => activeSurface === 'walls' ? wallMaskRef.current : floorMaskRef.current;
+
   const stroke = (from, to) => {
+    const maskRef = getActiveMaskRef();
     const mctx = maskRef.current.getContext('2d');
     if (mode === 'paint') {
       mctx.globalCompositeOperation = 'source-over';
@@ -494,7 +557,6 @@ function MaterialTester() {
     mctx.moveTo(from.x, from.y);
     mctx.lineTo(to.x, to.y);
     mctx.stroke();
-    // also stamp a circle so single clicks register
     mctx.beginPath();
     mctx.arc(to.x, to.y, brushSize / 2, 0, Math.PI * 2);
     mctx.fill();
@@ -519,11 +581,13 @@ function MaterialTester() {
   const onUp = () => { drawing.current = false; lastPt.current = null; };
 
   const resetMask = () => {
+    const maskRef = getActiveMaskRef();
     const mctx = maskRef.current.getContext('2d');
     mctx.clearRect(0, 0, maskRef.current.width, maskRef.current.height);
     composite();
   };
   const fillAll = () => {
+    const maskRef = getActiveMaskRef();
     const mctx = maskRef.current.getContext('2d');
     mctx.globalCompositeOperation = 'source-over';
     mctx.fillStyle = '#fff';
@@ -534,7 +598,7 @@ function MaterialTester() {
     if (!canvasRef.current || !photo) return;
     const url = canvasRef.current.toDataURL('image/png');
     const a = document.createElement('a');
-    a.href = url; a.download = `simulacion-${selected?.name || 'ca'}.png`;
+    a.href = url; a.download = `simulacion-ca.png`;
     a.click();
   };
 
@@ -545,7 +609,7 @@ function MaterialTester() {
         <div>
           <h3>Probador de Materiales</h3>
           <p style={{ color: 'var(--muted)', fontSize: 14, margin: '6px 0 0' }}>
-            Subí una foto y simulá cómo lucen nuestros materiales en las paredes de tu espacio.
+            Subí una foto y simulá cómo lucen nuestros materiales en paredes y pisos.
           </p>
         </div>
       </div>
@@ -576,7 +640,7 @@ function MaterialTester() {
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               </div>
               <h4>Subí una foto de tu espacio</h4>
-              <p>Detectamos automáticamente las paredes. Seleccioná un material de la lista para verlo aplicado en tus paredes.</p>
+              <p>Detectamos automáticamente paredes y pisos. Seleccioná materiales para verlos aplicados.</p>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
                 <label className="btn btn-primary" style={{ cursor: 'pointer' }}>
                   Elegir archivo
@@ -596,23 +660,56 @@ function MaterialTester() {
 
         <div className="tester-side">
           <div>
-            <h4>Material</h4>
-            <div className="tester-mat-grid">
-              {materials.map((m) => (
-                <div
-                  key={m.id}
-                  className={`tester-mat ${m.id === selectedId ? 'active' : ''}`}
-                  title={m.name}
-                  onClick={() => setSelectedId(m.id)}
-                >
-                  <ProceduralSwatch material={m} size={120} />
-                  <div className="label">{m.name.split(' ').slice(0, 2).join(' ')}</div>
-                </div>
-              ))}
+            <h4>Superficie activa</h4>
+            <div className="tester-tools" style={{ marginBottom: 16 }}>
+              <button 
+                className={`tool-btn ${activeSurface === 'walls' ? 'active' : ''}`} 
+                onClick={() => setActiveSurface('walls')}
+                disabled={!photo}
+              >
+                🧱 Paredes
+              </button>
+              <button 
+                className={`tool-btn ${activeSurface === 'floors' ? 'active' : ''}`} 
+                onClick={() => setActiveSurface('floors')}
+                disabled={!photo}
+              >
+                🪵 Pisos
+              </button>
             </div>
-            {selected && (
+          </div>
+
+          <div>
+            <h4>Material para {activeSurface === 'walls' ? 'paredes' : 'pisos'}</h4>
+            <div className="tester-mat-grid">
+              {materials.map((m) => {
+                const isActive = activeSurface === 'walls' ? m.id === selectedWallId : m.id === selectedFloorId;
+                return (
+                  <div
+                    key={m.id}
+                    className={`tester-mat ${isActive ? 'active' : ''}`}
+                    title={m.name}
+                    onClick={() => {
+                      if (activeSurface === 'walls') {
+                        setSelectedWallId(m.id);
+                      } else {
+                        setSelectedFloorId(m.id);
+                      }
+                    }}
+                  >
+                    <ProceduralSwatch material={m} size={120} />
+                    <div className="label">{m.name.split(' ').slice(0, 2).join(' ')}</div>
+                  </div>
+                );
+              })}
+            </div>
+            {((activeSurface === 'walls' && selectedWall) || (activeSurface === 'floors' && selectedFloor)) && (
               <div style={{ marginTop: 10, fontSize: 12, color: 'var(--muted)' }}>
-                <b style={{ color: 'var(--text)' }}>{selected.name}</b> · ${selected.price.toLocaleString('es-AR')}/{selected.unit}
+                <b style={{ color: 'var(--text)' }}>
+                  {(activeSurface === 'walls' ? selectedWall?.name : selectedFloor?.name)}
+                </b> · $
+                {(activeSurface === 'walls' ? selectedWall?.price : selectedFloor?.price)?.toLocaleString('es-AR')}/
+                {(activeSurface === 'walls' ? selectedWall?.unit : selectedFloor?.unit)}
               </div>
             )}
           </div>
@@ -628,7 +725,7 @@ function MaterialTester() {
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 20H7L3 16a2 2 0 0 1 0-2.8L13.2 3 21 10.8a2 2 0 0 1 0 2.8L14 21"/></svg>
                 Remover
               </button>
-              <button className="tool-btn" onClick={resetMask} disabled={!photo}>Re-detectar</button>
+              <button className="tool-btn" onClick={resetMask} disabled={!photo}>Limpiar</button>
             </div>
             <div style={{ marginTop: 14 }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>Tamaño del pincel: <b style={{ color: 'var(--text)' }}>{brushSize}px</b></div>
