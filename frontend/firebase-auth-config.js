@@ -1,7 +1,7 @@
 // Configuración de Firebase para autenticación
-function initializeFirebaseAuth() {
+(function initializeFirebaseAuth() {
   if (!window.firebase) {
-    console.error('Firebase SDK no está cargado aún');
+    setTimeout(initializeFirebaseAuth, 100);
     return;
   }
 
@@ -14,26 +14,13 @@ function initializeFirebaseAuth() {
     appId: "1:346873650873:web:4e7c5b5e6f8c9d0e1f2g3h4i"
   };
 
-  if (!window.firebase.apps.length) {
-    window.firebase.initializeApp(firebaseConfig);
-  }
-  const auth = window.firebase.auth();
-  window.firebaseAuth = auth;
-}
-
-// Esperar a que Firebase esté disponible
-if (window.firebase) {
-  initializeFirebaseAuth();
-} else {
-  document.addEventListener('firebase-loaded', initializeFirebaseAuth);
-  // Fallback: reintentar cada 100ms durante 5 segundos
-  let attempts = 0;
-  const checkInterval = setInterval(() => {
-    if (window.firebase) {
-      initializeFirebaseAuth();
-      clearInterval(checkInterval);
+  try {
+    if (!window.firebase.apps.length) {
+      window.firebase.initializeApp(firebaseConfig);
     }
-    attempts++;
-    if (attempts > 50) clearInterval(checkInterval);
-  }, 100);
-}
+    window.firebaseAuth = window.firebase.auth();
+    console.log('✓ Firebase Auth inicializado');
+  } catch (e) {
+    console.error('Error inicializando Firebase:', e);
+  }
+})();

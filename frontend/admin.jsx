@@ -825,7 +825,20 @@ function AdminsPage({ toast }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    loadAdmins();
+    const waitForFirebase = async () => {
+      let attempts = 0;
+      while (!window.firebaseAuth && attempts < 100) {
+        await new Promise(r => setTimeout(r, 50));
+        attempts++;
+      }
+      if (window.firebaseAuth) {
+        loadAdmins();
+      } else {
+        console.error('Firebase Auth no inicializó');
+        setLoading(false);
+      }
+    };
+    waitForFirebase();
   }, []);
 
   const loadAdmins = async () => {
