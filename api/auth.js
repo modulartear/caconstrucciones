@@ -28,53 +28,75 @@ export default async function handler(req, res) {
   try {
     const { action, username, password } = req.body;
 
+    console.log('========================================');
+    console.log('LOGIN ATTEMPT STARTED');
+    console.log('Input username:', JSON.stringify(username));
+    console.log('Input password:', JSON.stringify(password));
+
     // Login action
     if (action === 'login') {
-      console.log('Login attempt:', { username, password });
-
-      // Try Firestore first
-      let adminData = null;
-
-      // Check all admins
+      // Get ALL admins from Firestore
+      console.log('Fetching all admins from Firestore...');
       const snapshot = await db.collection('admins').get();
-      console.log('Total admins:', snapshot.size);
+      console.log('Total admins found in Firestore:', snapshot.size);
 
       for (const doc of snapshot.docs) {
         const data = doc.data();
-        console.log('Checking admin:', data);
+        console.log('---');
+        console.log('Checking admin doc:', doc.id);
+        console.log('Admin data:', JSON.stringify(data, null, 2));
 
-        if (data.username === username || data.email === username) {
-          adminData = data;
-          console.log('Found matching admin!');
-          break;
-        }
-      }
+        // Normalize all values to strings for comparison
+        const dataUsername = String(data.username || '');
+        const dataEmail = String(data.email || '');
+        const dataPassword = String(data.password || '');
+        const inputUsername = String(username || '');
+        const inputPassword = String(password || '');
 
-      if (adminData) {
-        if (adminData.password === password) {
-          console.log('Password matches!');
+        console.log('Normalized:');
+        console.log('- dataUsername:', JSON.stringify(dataUsername));
+        console.log('- dataEmail:', JSON.stringify(dataEmail));
+        console.log('- dataPassword:', JSON.stringify(dataPassword));
+        console.log('- inputUsername:', JSON.stringify(inputUsername));
+        console.log('- inputPassword:', JSON.stringify(inputPassword));
+
+        // Check if matches username or email
+        const usernameMatch = dataUsername === inputUsername;
+        const emailMatch = dataEmail === inputUsername;
+        const passwordMatch = dataPassword === inputPassword;
+
+        console.log('Matches:');
+        console.log('- usernameMatch:', usernameMatch);
+        console.log('- emailMatch:', emailMatch);
+        console.log('- passwordMatch:', passwordMatch);
+
+        if ((usernameMatch || emailMatch) && passwordMatch) {
+          console.log('✅ SUCCESS: Admin authenticated!');
           return res.status(200).json({
             success: true,
             token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
           });
-        } else {
-          console.log('Password does not match');
         }
-      } else {
-        console.log('No admin found in Firestore');
       }
+
+      console.log('❌ No matching admin found in Firestore');
+      console.log('Falling back to environment variables...');
 
       // Fallback to env vars
       const adminUser = process.env.ADMIN_USERNAME || 'admin';
       const adminPass = process.env.ADMIN_PASSWORD || '1234';
+      console.log('Env adminUser:', JSON.stringify(adminUser));
+      console.log('Env adminPass:', JSON.stringify(adminPass));
 
       if (username === adminUser && password === adminPass) {
+        console.log('✅ SUCCESS: Authenticated with env vars');
         return res.status(200).json({
           success: true,
           token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
         });
       }
 
+      console.log('❌ ALL AUTHENTICATION METHODS FAILED');
       return res.status(401).json({ error: 'Credenciales incorrectas' });
     }
 
@@ -97,7 +119,8 @@ export default async function handler(req, res) {
 
     res.status(400).json({ error: 'Invalid action' });
   } catch (error) {
-    console.error('Auth error:', error);
+    console.error('❌ AUTH ERROR:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({ error: error.message });
   }
 }
