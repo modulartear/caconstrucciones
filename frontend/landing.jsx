@@ -210,8 +210,11 @@ function Servicios() {
 function Obras() {
   const projects = useStore('projects');
   const [filter, setFilter] = useState('todas');
-  const [open, setOpen] = useState(null);
   const filtered = filter === 'todas' ? projects : projects.filter((p) => p.status === filter);
+
+  const handleObraClick = (project) => {
+    window.location.href = `obra.html?id=${project.id}`;
+  };
 
   return (
     <section id="obras" style={{ background: 'linear-gradient(180deg, transparent, var(--bg-2))' }}>
@@ -235,7 +238,7 @@ function Obras() {
         <Reveal className="stagger">
           <div className="obras-grid">
             {filtered.map((p) => (
-              <div className="obra-card" key={p.id} onClick={() => setOpen(p)}>
+              <div className="obra-card" key={p.id} onClick={() => handleObraClick(p)}>
                 <div className="obra-img">
                   <span className={`obra-status ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>
                     {p.status === 'en-proceso' ? 'En proceso' : 'Finalizada'}
@@ -261,36 +264,6 @@ function Obras() {
           </div>
         </Reveal>
       </div>
-
-      {open && (
-        <div className="modal-backdrop" onClick={() => setOpen(null)}>
-          <div className="modal lg" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 900 }}>
-            <button className="modal-close" onClick={() => setOpen(null)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            <img src={open.cover} alt={open.title} style={{ width: '100%', height: 320, objectFit: 'cover', borderRadius: 14, marginBottom: 24 }} />
-            {open.gallery && open.gallery.length > 0 && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
-                {open.gallery.map((photo, i) => (
-                  <img key={i} src={photo} alt={`Foto ${i + 1}`} style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 10, cursor: 'pointer' }} />
-                ))}
-              </div>
-            )}
-            <span className={`obra-status ${open.status === 'en-proceso' ? 'proceso' : 'finalizada'}`} style={{ position: 'static', marginBottom: 10, display: 'inline-block' }}>
-              {open.status === 'en-proceso' ? 'En proceso' : 'Finalizada'}
-            </span>
-            <h3>{open.title}</h3>
-            <p className="sub" style={{ marginBottom: 12 }}>{open.location} · {open.surface} m² · {open.year}</p>
-            <p style={{ color: 'var(--muted)', lineHeight: 1.6 }}>{open.description}</p>
-            {open.status === 'en-proceso' && typeof open.progress === 'number' && (
-              <div className="obra-progress" style={{ marginTop: 20 }}>
-                <div className="label"><span>Avance de obra</span><span>{open.progress}%</span></div>
-                <div className="obra-progress-bar"><div style={{ width: open.progress + '%' }}></div></div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </section>
   );
 }
