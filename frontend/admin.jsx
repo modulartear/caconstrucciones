@@ -831,7 +831,12 @@ function AdminsPage({ toast }) {
   const loadAdmins = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('ca_admin_token');
+      const token = await window.firebaseAuth.currentUser?.getIdToken();
+      if (!token) {
+        console.error('No hay token disponible');
+        setLoading(false);
+        return;
+      }
       const res = await fetch('/api/admins', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -852,7 +857,12 @@ function AdminsPage({ toast }) {
     try {
       setCreating(true);
       setError('');
-      const token = localStorage.getItem('ca_admin_token');
+      const token = await window.firebaseAuth.currentUser?.getIdToken();
+      if (!token) {
+        setError('No autenticado');
+        setCreating(false);
+        return;
+      }
       const res = await fetch('/api/admins', {
         method: 'POST',
         headers: {
@@ -881,7 +891,11 @@ function AdminsPage({ toast }) {
   const deleteAdmin = async (uid) => {
     if (!confirm('¿Eliminar este administrador?')) return;
     try {
-      const token = localStorage.getItem('ca_admin_token');
+      const token = await window.firebaseAuth.currentUser?.getIdToken();
+      if (!token) {
+        toast('No autenticado', 'error');
+        return;
+      }
       const res = await fetch('/api/admins', {
         method: 'DELETE',
         headers: {
@@ -893,6 +907,8 @@ function AdminsPage({ toast }) {
       if (res.ok) {
         toast('Administrador eliminado');
         loadAdmins();
+      } else {
+        toast('Error eliminando admin', 'error');
       }
     } catch (e) {
       toast('Error eliminando admin', 'error');
