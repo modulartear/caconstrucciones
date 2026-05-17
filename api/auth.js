@@ -31,29 +31,61 @@ export default async function handler(req, res) {
 
     // Login action
     if (action === 'login') {
-      console.log('Login attempt for username:', username);
+      console.log('=== LOGIN ATTEMPT ===');
+      console.log('Username/Email:', username);
+      console.log('Password:', password);
       
-      // First try Firestore for admins
-      const adminsSnapshot = await db.collection('admins').where('username', '==', username).get();
-      console.log('Admins snapshot size:', adminsSnapshot.size);
-      
-      if (!adminsSnapshot.empty) {
-        const adminDoc = adminsSnapshot.docs[0];
-        const adminData = adminDoc.data();
-        console.log('Admin data found:', adminData);
+      try {
+        // First try Firestore for admins - search by username OR email
+        let adminDoc = null;
+        let adminData = null;
         
-        // Check password (NOTE: In production, you should hash passwords!)
-        if (adminData.password === password) {
-          console.log('Password matches!');
-          return res.status(200).json({
-            success: true,
-            token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
-          });
+        // Get ALL admins to debug
+        const allAdminsSnapshot = await db.collection('admins').get();
+        console.log('Total admins in Firestore:', allAdminsSnapshot.size);
+        allAdminsSnapshot.docs.forEach(doc => {
+          console.log('Admin doc:', doc.id, doc.data());
+        });
+        
+        // Try by username
+        const usernameSnapshot = await db.collection('admins').where('username', '==', username).get();
+        console.log('Username query results:', usernameSnapshot.size);
+        if (!usernameSnapshot.empty) {
+          adminDoc = usernameSnapshot.docs[0];
+          adminData = adminDoc.data();
+          console.log('Admin found by username:', adminData);
         } else {
-          console.log('Password does NOT match');
+          // Try by email
+          const emailSnapshot = await db.collection('admins').where('email', '==', username).get();
+          console.log('Email query results:', emailSnapshot.size);
+          if (!emailSnapshot.empty) {
+            adminDoc = emailSnapshot.docs[0];
+            adminData = adminDoc.data();
+            console.log('Admin found by email:', adminData);
+          }
         }
-      } else {
-        console.log('No admin found with username:', username);
+        
+        if (adminData) {
+          console.log('Comparing passwords:');
+          console.log('- Input password:', password);
+          console.log('- Stored password:', adminData.password);
+          console.log('- Match:', adminData.password === password);
+          
+          // Check password (NOTE: In production, you should hash passwords!)
+          if (adminData.password === password) {
+            console.log('Password matches!');
+            return res.status(200).json({
+              success: true,
+              token: Buffer.from(`${username}:${Date.now()}`).toString('base64')
+            });
+          } else {
+            console.log('Password does NOT match');
+          }
+        } else {
+          console.log('No admin found with identifier:', username);
+        }
+      } catch (error) {
+        console.error('Firestore query error:', error);
       }
       
       // Fallback to environment variables for backwards compatibility
