@@ -1,14 +1,6 @@
 // CA Construcciones — API Store (datos desde Firestore vía API)
 (function () {
-  const API_ENDPOINTS = {
-    materials: '/api/firestore-materials',
-    projects: '/api/firestore-projects',
-    testimonials: '/api/firestore-testimonials',
-    brands: '/api/firestore-brands',
-    budgets: '/api/firestore-budgets',
-    clients: '/api/firestore-clients',
-    site: '/api/firestore-site'
-  };
+  const API_BASE = '/api/firestore';
 
   const DEFAULT_SEEDS = {
     materials: [],
@@ -29,10 +21,7 @@
 
     loadingPromises[name] = (async () => {
       try {
-        const endpoint = API_ENDPOINTS[name];
-        if (!endpoint) return DEFAULT_SEEDS[name] || [];
-
-        const res = await fetch(endpoint);
+        const res = await fetch(`${API_BASE}?type=${name}`);
         if (res.ok) {
           const data = await res.json();
           localCache[name] = Array.isArray(data) ? data : (data || DEFAULT_SEEDS[name]);
@@ -54,13 +43,10 @@
 
   async function saveItem(name, item) {
     try {
-      const endpoint = API_ENDPOINTS[name];
-      if (!endpoint) return;
-
-      const res = await fetch(endpoint, {
+      const res = await fetch(API_BASE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
+        body: JSON.stringify({ ...item, type: name }),
       });
 
       if (res.ok) {
@@ -82,13 +68,10 @@
 
   async function deleteItem(name, id) {
     try {
-      const endpoint = API_ENDPOINTS[name];
-      if (!endpoint) return;
-
-      await fetch(endpoint, {
+      await fetch(API_BASE, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
+        body: JSON.stringify({ id, type: name }),
       });
 
       const items = load(name);
