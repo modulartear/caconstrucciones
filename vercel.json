@@ -3,6 +3,30 @@
   "outputDirectory": "frontend",
   "routes": [
     {
+      "src": "/api/templates",
+      "dest": "/api/visualizador?action=templates"
+    },
+    {
+      "src": "/api/materials",
+      "dest": "/api/visualizador?action=materials"
+    },
+    {
+      "src": "/api/usage/(.*)",
+      "dest": "/api/visualizador?action=usage&sessionId=$1"
+    },
+    {
+      "src": "/api/generate",
+      "dest": "/api/visualizador?action=generate"
+    },
+    {
+      "src": "/api/leads",
+      "dest": "/api/visualizador?action=leads"
+    },
+    {
+      "src": "/api/visualize",
+      "dest": "/api/visualizador?action=legacy-visualize"
+    },
+    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },

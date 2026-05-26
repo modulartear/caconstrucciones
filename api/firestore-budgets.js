@@ -1,2 +1,2 @@
-import { createHandler } from './firestore-common.js';
+import { createHandler } from '../lib/firestore-common.js';
 export default createHandler('budgets');
