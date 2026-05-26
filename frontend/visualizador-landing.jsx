@@ -1,6 +1,6 @@
 // Visualizador IA integrado para la landing sin Web Components.
 (function () {
-  const { useEffect, useMemo, useState } = React;
+  const { useEffect, useMemo, useRef, useState } = React;
 
   const fallbackTemplates = [
     { id: 'wall', label: 'Pared', target: 'wall', imageUrl: '/visualizador-assets/wall-original.png' },
@@ -9,6 +9,42 @@
   ];
 
   const labels = { wall: 'Pared', floor: 'Piso', facade: 'Fachada' };
+
+  function ProceduralSwatch({ material, size = 90, className = '' }) {
+    const ref = useRef(null);
+
+    useEffect(() => {
+      if (!ref.current) return;
+      const canvas = ref.current;
+      const ctx = canvas.getContext('2d');
+      const baseColor = material.color || material.swatch || '#b8b7b0';
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = baseColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const seed = String(material.id || material.name || baseColor)
+        .split('')
+        .reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+      for (let i = 0; i < 50; i++) {
+        const x = seeded(seed + i * 17) * canvas.width;
+        const y = seeded(seed + i * 31) * canvas.height;
+        const r = seeded(seed + i * 47) * 20 + 5;
+        ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }, [material.id, material.color, material.swatch, material.name, size]);
+
+    return <canvas ref={ref} width={size} height={size} className={className} />;
+  }
+
+  function seeded(value) {
+    const x = Math.sin(value) * 10000;
+    return x - Math.floor(x);
+  }
 
   function VisualizadorIAWidget({ apiUrl = '', clientId = 'ca-landing' }) {
     const [sessionId] = useState(() => getSessionId(clientId));
@@ -201,5 +237,6 @@
     return next;
   }
 
+  window.ProceduralSwatch = ProceduralSwatch;
   window.VisualizadorIAWidget = VisualizadorIAWidget;
 })();
