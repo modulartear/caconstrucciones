@@ -19,6 +19,10 @@
       "dest": "/$1"
     },
     {
+      "src": "/(.*\\.(png|jpg|jpeg|webp|svg))$",
+      "dest": "/$1"
+    },
+    {
       "src": "/.*",
       "dest": "/index.html"
     }

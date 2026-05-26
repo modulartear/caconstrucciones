@@ -1,5 +1,5 @@
 // CA Construcciones — Landing principal
-// Depende de: store.js, material-tester.jsx (MaterialTester, ProceduralSwatch)
+// Depende de: store.js, visualizador-landing.jsx (ProceduralSwatch)
 
 const { useState, useEffect, useRef, useMemo } = React;
 
@@ -323,10 +323,10 @@ function TesterSection() {
             <div className="kicker">Tecnología CA</div>
             <h2 style={{ marginTop: 18 }}>Probá los materiales en tu obra antes de elegirlos.</h2>
           </Reveal>
-          <Reveal className="reveal-up"><p>Subí una foto, pintá la zona y nuestra IA te sugiere los acabados que mejor encajan.</p></Reveal>
+          <Reveal className="reveal-up"><p>Elegí una escena, seleccioná un material y visualizá el resultado con IA sobre paredes, pisos o fachada.</p></Reveal>
         </div>
         <Reveal>
-          <window.MaterialTester />
+          <window.VisualizadorIAWidget apiUrl="" clientId="ca-landing" />
         </Reveal>
       </div>
     </section>

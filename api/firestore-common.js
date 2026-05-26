@@ -3,13 +3,15 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: './backend/.env' });
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
-if (!admin.apps.length) {
+const serviceAccountRaw = process.env.FIREBASE_SERVICE_ACCOUNT;
+if (!admin.apps.length && serviceAccountRaw) {
+  const serviceAccount = JSON.parse(serviceAccountRaw);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
   });
 }
-const db = admin.firestore();
+const db = admin.apps.length ? admin.firestore() : null;
+export { db };
 
 const collectionHandlers = {
   materials: {
