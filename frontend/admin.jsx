@@ -702,7 +702,7 @@ function PresupuestosPage({ toast }) {
               {filtered.map((b) => (
                 <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => setOpen(b)}>
                   <td><b>{b.client}</b><div style={{ color: 'var(--muted)', fontSize: 12 }}>{b.surface ? b.surface + ' m²' : '—'}</div></td>
-                  <td>{b.type}</td>
+                  <td>{b.type}{b.visualizerImage && <div style={{ color: 'var(--accent)', fontSize: 12, marginTop: 4 }}>DiseÃ±o IA adjunto</div>}</td>
                   <td><div style={{ fontSize: 13 }}>{b.email}</div><div style={{ color: 'var(--muted)', fontSize: 12 }}>{b.phone}</div></td>
                   <td><span className={`status-pill status-${b.status}`}>{b.status}</span></td>
                   <td style={{ color: 'var(--muted)', fontSize: 13 }}>{b.date}</td>
@@ -726,7 +726,16 @@ function PresupuestosPage({ toast }) {
               <div><label>Teléfono</label><div>{open.phone || '—'}</div></div>
               <div><label>Superficie</label><div>{open.surface ? open.surface + ' m²' : '—'}</div></div>
               <div><label>Tipo</label><div>{open.type}</div></div>
+              <div><label>Localidad</label><div>{open.locality || 'â€”'}</div></div>
+              {open.visualizerMaterialName && <div><label>Material elegido</label><div>{open.visualizerMaterialName}</div></div>}
+              {open.visualizerScene && <div><label>Escena</label><div>{open.visualizerScene}</div></div>}
             </div>
+            {open.visualizerImage && (
+              <div>
+                <label>DiseÃ±o generado</label>
+                <img src={open.visualizerImage} alt="DiseÃ±o generado en visualizador IA" style={{ width: '100%', maxHeight: 420, objectFit: 'contain', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 12 }} />
+              </div>
+            )}
             <div><label>Mensaje</label><div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: 14, fontSize: 14, lineHeight: 1.55 }}>{open.message || '— Sin mensaje —'}</div></div>
             <div>
               <label>Cambiar estado</label>

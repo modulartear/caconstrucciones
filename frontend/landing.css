@@ -545,8 +545,8 @@ footer { padding: 60px 0 30px; border-top: 1px solid var(--border); margin-top: 
 
 .ca-viz-materials {
   display: grid;
-  gap: 10px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
 
 .ca-viz-materials button {
@@ -556,10 +556,10 @@ footer { padding: 60px 0 30px; border-top: 1px solid var(--border); margin-top: 
   border-radius: 12px;
   color: var(--text);
   display: grid;
-  gap: 10px;
-  grid-template-columns: 30px 1fr;
-  min-height: 50px;
-  padding: 9px 12px;
+  gap: 12px;
+  grid-template-columns: 68px 1fr;
+  min-height: 78px;
+  padding: 8px 12px 8px 8px;
   text-align: left;
 }
 
@@ -570,9 +570,18 @@ footer { padding: 60px 0 30px; border-top: 1px solid var(--border); margin-top: 
 
 .ca-viz-swatch {
   border: 1px solid rgba(255,255,255,.2);
-  border-radius: 8px;
-  height: 30px;
-  width: 30px;
+  border-radius: 10px;
+  height: 62px;
+  width: 62px;
+}
+
+.ca-viz-material-photo {
+  aspect-ratio: 1 / 1;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 10px;
+  height: 62px;
+  object-fit: cover;
+  width: 62px;
 }
 
 .ca-viz-generate {
@@ -656,9 +665,48 @@ footer { padding: 60px 0 30px; border-top: 1px solid var(--border); margin-top: 
   min-height: 44px;
 }
 
+.ca-viz-budget {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 18px;
+}
+
+.ca-viz-budget-head {
+  display: grid;
+  gap: 4px;
+  grid-column: 1 / -1;
+}
+
+.ca-viz-budget-head strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.ca-viz-budget-head span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.ca-viz-budget textarea {
+  grid-column: 1 / -1;
+  min-height: 82px;
+  resize: vertical;
+}
+
+.ca-viz-budget button {
+  grid-column: 1 / -1;
+  justify-content: center;
+  min-height: 48px;
+}
+
 @media (max-width: 760px) {
   .ca-viz-preview,
-  .ca-viz-tabs {
+  .ca-viz-tabs,
+  .ca-viz-budget {
     grid-template-columns: 1fr;
   }
 }

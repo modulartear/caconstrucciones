@@ -57,6 +57,7 @@
     const [usage, setUsage] = useState({ count: 0, registered: false, limit: 2 });
     const [showLead, setShowLead] = useState(false);
     const [error, setError] = useState('');
+    const [budgetSent, setBudgetSent] = useState(false);
 
     const selectedTemplate = templates.find((item) => item.id === selectedTemplateId) || templates[0];
     const target = selectedTemplate.target;
@@ -93,6 +94,7 @@
       setSelectedTemplateId(templateId);
       setMaterialId(nextMaterials[0]?.id || '');
       setResultUrl(null);
+      setBudgetSent(false);
       setError('');
     }
 
@@ -129,6 +131,7 @@
           throw new Error(data.detail || data.error || 'No se pudo generar la visualización.');
         }
         setResultUrl(data.resultUrl);
+        setBudgetSent(false);
         if (data.usage) setUsage(data.usage);
       } catch (err) {
         setError(err.message || 'No se pudo generar la visualización.');
@@ -155,8 +158,8 @@
             <div className="ca-viz-label">Material para {labels[target].toLowerCase()}</div>
             <div className="ca-viz-materials">
               {targetMaterials.map((material) => (
-                <button key={material.id} className={selectedMaterial?.id === material.id ? 'active' : ''} onClick={() => { setMaterialId(material.id); setResultUrl(null); }}>
-                  <span className="ca-viz-swatch" style={{ background: material.swatch || '#ccc' }}></span>
+                <button key={material.id} className={selectedMaterial?.id === material.id ? 'active' : ''} onClick={() => { setMaterialId(material.id); setResultUrl(null); setBudgetSent(false); }}>
+                  <MaterialThumb material={material} />
                   <span>{material.label}</span>
                 </button>
               ))}
@@ -186,8 +189,31 @@
           <span>Generaciones: {usage.registered ? 'registrado' : `${usage.count}/${usage.limit}`}</span>
           {error && <strong>{error}</strong>}
         </div>
+
+        {resultUrl && (
+          <BudgetForm
+            apiUrl={apiUrl}
+            clientId={clientId}
+            sessionId={sessionId}
+            selectedTemplate={selectedTemplate}
+            selectedMaterial={selectedMaterial}
+            target={target}
+            resultUrl={resultUrl}
+            setUsage={setUsage}
+            setError={setError}
+            budgetSent={budgetSent}
+            setBudgetSent={setBudgetSent}
+          />
+        )}
       </div>
     );
+  }
+
+  function MaterialThumb({ material }) {
+    if (material.photo) {
+      return <img className="ca-viz-material-photo" src={material.photo} alt="" loading="lazy" />;
+    }
+    return <span className="ca-viz-swatch" style={{ background: material.swatch || '#ccc' }}></span>;
   }
 
   function LeadForm({ apiUrl, clientId, sessionId, setUsage, setShowLead, setError }) {
@@ -226,6 +252,99 @@
         <button className="btn btn-primary" disabled={saving}>{saving ? 'Guardando...' : 'Registrarme'}</button>
       </form>
     );
+  }
+
+  function BudgetForm({
+    apiUrl, clientId, sessionId, selectedTemplate, selectedMaterial, target, resultUrl,
+    setUsage, setError, budgetSent, setBudgetSent
+  }) {
+    const [form, setForm] = useState({
+      firstName: '',
+      lastName: '',
+      phone: '',
+      email: '',
+      locality: '',
+      surface: '',
+      notes: ''
+    });
+    const [saving, setSaving] = useState(false);
+
+    async function submit(e) {
+      e.preventDefault();
+      setSaving(true);
+      setError('');
+      try {
+        const resultImage = await compressImageForBudget(resultUrl);
+        const response = await fetch(`${apiUrl}/api/visualizador-budget`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...form,
+            clientId,
+            sessionId,
+            templateId: selectedTemplate.id,
+            sceneLabel: selectedTemplate.label,
+            target,
+            materialId: selectedMaterial.id,
+            materialLabel: selectedMaterial.label,
+            materialPhoto: selectedMaterial.photo || '',
+            originalImage: selectedTemplate.imageUrl,
+            resultImage
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'No se pudo enviar el presupuesto.');
+        if (data.usage) setUsage(data.usage);
+        setBudgetSent(true);
+      } catch (err) {
+        setError(err.message || 'No se pudo enviar el presupuesto.');
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    return (
+      <form className="ca-viz-budget" onSubmit={submit}>
+        <div className="ca-viz-budget-head">
+          <strong>{budgetSent ? 'Propuesta enviada' : 'Enviar este diseño para presupuesto'}</strong>
+          <span>{budgetSent ? 'La solicitud quedó guardada en el panel de presupuestos.' : 'Adjuntamos la imagen generada y tus datos para contactarte.'}</span>
+        </div>
+        {!budgetSent && (
+          <>
+            <input required placeholder="Nombre" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
+            <input required placeholder="Apellido" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
+            <input required placeholder="Teléfono" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+            <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <input required placeholder="Localidad" value={form.locality} onChange={(e) => setForm({ ...form, locality: e.target.value })} />
+            <input type="number" min="0" placeholder="Superficie estimada (m²)" value={form.surface} onChange={(e) => setForm({ ...form, surface: e.target.value })} />
+            <textarea placeholder="Comentarios para el presupuesto" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}></textarea>
+            <button className="btn btn-primary" disabled={saving}>{saving ? 'Enviando...' : 'Enviar propuesta'}</button>
+          </>
+        )}
+      </form>
+    );
+  }
+
+  async function compressImageForBudget(src) {
+    const img = await loadImage(src);
+    const maxWidth = 900;
+    const ratio = Math.min(1, maxWidth / img.width);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(img.width * ratio));
+    canvas.height = Math.max(1, Math.round(img.height * ratio));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.72);
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.crossOrigin = 'anonymous';
+      img.src = src;
+    });
   }
 
   function getSessionId(clientId) {

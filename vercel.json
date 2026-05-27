@@ -23,6 +23,10 @@
       "dest": "/api/visualizador?action=leads"
     },
     {
+      "src": "/api/visualizador-budget",
+      "dest": "/api/visualizador?action=budget"
+    },
+    {
       "src": "/api/visualize",
       "dest": "/api/visualizador?action=legacy-visualize"
     },

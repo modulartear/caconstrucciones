@@ -8,6 +8,7 @@ import {
   loadWidgetMaterials,
   recordGeneration,
   saveLead,
+  saveVisualizerBudget,
   setCors,
   TEMPLATES
 } from '../lib/visualizador-common.js';
@@ -32,6 +33,7 @@ export default async function handler(req, res) {
     if (action === 'usage') return handleUsage(req, res);
     if (action === 'generate') return handleGenerate(req, res);
     if (action === 'leads') return handleLeads(req, res);
+    if (action === 'budget') return handleBudget(req, res);
     if (action === 'legacy-visualize') return handleLegacyVisualize(req, res);
     return res.status(404).json({ error: 'Visualizer route not found.' });
   } catch (error) {
@@ -108,6 +110,26 @@ async function handleLeads(req, res) {
 
   await saveLead({ sessionId, clientId, firstName, lastName, phone, email, locality });
   return res.status(200).json({ ok: true, usage: await getUsage(sessionId) });
+}
+
+async function handleBudget(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const body = await readJsonBody(req);
+  const {
+    sessionId, clientId, firstName, lastName, phone, email, locality,
+    templateId, target, materialId, resultImage
+  } = body || {};
+
+  if (!sessionId || !clientId || !firstName || !lastName || !phone || !email || !locality) {
+    return res.status(400).json({ error: 'Completa nombre, apellido, telefono, email y localidad.' });
+  }
+  if (!templateId || !target || !materialId || !resultImage) {
+    return res.status(400).json({ error: 'Falta la visualizacion generada para adjuntar al presupuesto.' });
+  }
+
+  const budget = await saveVisualizerBudget(body);
+  return res.status(200).json({ ok: true, budget, usage: await getUsage(sessionId) });
 }
 
 async function handleLegacyVisualize(req, res) {
