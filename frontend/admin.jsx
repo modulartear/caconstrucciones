@@ -1,5 +1,5 @@
 // CA Construcciones — Dashboard administrativo
-// Depende de: store.js, material-tester.jsx (ProceduralSwatch, generateTexture)
+// Depende de: store.js
 
 const { useState, useEffect, useMemo, useRef } = React;
 
@@ -44,6 +44,115 @@ function useStoreVal(name) {
   return v;
 }
 function setStore(name, data) { window.CAStore.set(name, data); }
+
+function generateTexture(canvas, texture = 'paint', color = '#e8e4dd', accent = '#9aa0a8') {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+  const seed = String(`${texture}-${color}-${accent}`).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = color || '#e8e4dd';
+  ctx.fillRect(0, 0, w, h);
+
+  if (texture === 'wood') {
+    for (let y = 0; y < h; y += 8) {
+      ctx.strokeStyle = y % 16 === 0 ? alpha(accent, 0.42) : 'rgba(255,255,255,.16)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, y + seeded(seed + y) * 4);
+      for (let x = 0; x <= w; x += 18) ctx.lineTo(x, y + Math.sin((x + seed) * 0.035) * 5);
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (texture === 'brick') {
+    ctx.strokeStyle = alpha(accent, 0.45);
+    ctx.lineWidth = 2;
+    const rowH = 28;
+    const brickW = 64;
+    for (let y = 0; y < h; y += rowH) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+      const offset = Math.floor(y / rowH) % 2 ? brickW / 2 : 0;
+      for (let x = -offset; x < w; x += brickW) {
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + rowH);
+        ctx.stroke();
+      }
+    }
+    return;
+  }
+
+  if (texture === 'marble') {
+    for (let i = 0; i < 24; i++) {
+      ctx.strokeStyle = i % 3 === 0 ? alpha(accent, 0.38) : 'rgba(255,255,255,.24)';
+      ctx.lineWidth = seeded(seed + i) * 2 + 0.8;
+      ctx.beginPath();
+      const startY = seeded(seed + i * 9) * h;
+      ctx.moveTo(-20, startY);
+      for (let x = 0; x <= w + 20; x += 28) {
+        ctx.lineTo(x, startY + Math.sin((x + i * 21) * 0.035) * 18 + seeded(seed + x + i) * 10);
+      }
+      ctx.stroke();
+    }
+    return;
+  }
+
+  if (texture === 'stone' || texture === 'cement') {
+    for (let i = 0; i < 80; i++) {
+      ctx.fillStyle = i % 2 ? alpha(accent, 0.16) : 'rgba(255,255,255,.10)';
+      ctx.beginPath();
+      ctx.arc(seeded(seed + i * 13) * w, seeded(seed + i * 29) * h, seeded(seed + i * 43) * 16 + 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return;
+  }
+
+  for (let i = 0; i < 44; i++) {
+    ctx.fillStyle = i % 2 ? alpha(accent, 0.14) : 'rgba(255,255,255,.10)';
+    ctx.fillRect(seeded(seed + i * 7) * w, seeded(seed + i * 19) * h, seeded(seed + i * 31) * 34 + 8, seeded(seed + i * 37) * 18 + 4);
+  }
+}
+
+function ProceduralSwatch({ material, size = 90, className = '' }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (material.photo) {
+      const img = new Image();
+      img.onload = () => {
+        if (!ref.current) return;
+        ref.current.getContext('2d').drawImage(img, 0, 0, size, size);
+      };
+      img.src = material.photo;
+      return;
+    }
+    generateTexture(ref.current, material.texture, material.color, material.accent);
+  }, [material.id, material.texture, material.color, material.accent, material.photo, size]);
+  return <canvas ref={ref} width={size} height={size} className={className} />;
+}
+
+function seeded(value) {
+  const x = Math.sin(value) * 10000;
+  return x - Math.floor(x);
+}
+
+function alpha(hex, opacity) {
+  const clean = String(hex || '#000000').replace('#', '');
+  const value = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean.padEnd(6, '0').slice(0, 6);
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${opacity})`;
+}
+
+window.generateTexture = generateTexture;
+window.ProceduralSwatch = ProceduralSwatch;
 
 function Toast({ msg, kind = 'success', onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 2800); return () => clearTimeout(t); }, [onDone]);
