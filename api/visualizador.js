@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     if (error?.statusCode === 400 || error?.message === 'Invalid JSON') {
       return res.status(400).json({ error: 'Invalid JSON payload.' });
     }
-    return res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    return res.status(error?.statusCode || 500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
   }
 }
 
