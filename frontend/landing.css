@@ -632,6 +632,11 @@ footer { padding: 60px 0 30px; border-top: 1px solid var(--border); margin-top: 
 .footer-links a { color: var(--muted); font-size: 13px; }
 .footer-links a:hover { color: var(--text); }
 
+section#top > div.container.hero-inner { max-width: 1320px; }
+section#top > div.container.hero-inner > div.hero-copy > div.reveal { width: 667px; }
+section#top > div.container.hero-inner > div.reveal > div.hero-media > div.moving-showcase { width: 500px; height: 550px; top: auto; left: 200px; }
+section#obras > div.container > div.reveal:nth-child(2) > div.obras-filter > button.filter-btn:nth-child(1).active { color: #ffffff; }
+
 /* Modal */
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 100;
