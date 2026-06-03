@@ -81,15 +81,19 @@ function Toast({ message, onDone }) {
 
 // ───────────────────────── Brand ─────────────────────────
 function BrandMark({ size = 38, site }) {
+  const fullLogo = site.logo_full || site.logoFull || null;
+  const logoSrc = fullLogo || site.logo || 'assets/ca-logo.png';
   return (
     <a href="#top" className="brand">
-      <div className="brand-mark" style={{ width: size, height: size }}>
-        <img src={site.logo || "assets/logo.jpg"} alt="CA Construcciones" />
-      </div>
-      <div className="brand-text">
-        <span className="top">CA Construcciones</span>
-        <span className="sub">Soluciones integrales</span>
-      </div>
+      <img
+        className="brand-logo"
+        src={logoSrc}
+        alt="CA construcciones · soluciones integrales"
+        onError={(e) => {
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = 'assets/logo.jpg';
+        }}
+      />
     </a>
   );
 }
@@ -143,16 +147,52 @@ function Nav({ onOpenLogin, site }) {
 function Hero() {
   const site = useStore('site');
   const projects = useStore('projects');
-  const featured = projects.find((p) => p.cover) || projects[0];
+  const heroCards = useMemo(() => {
+    const fromProjects = (projects || [])
+      .filter((p) => p && p.cover)
+      .slice(0, 6)
+      .map((p) => ({
+        id: p.id,
+        cover: p.cover,
+        title: p.title,
+        location: p.location,
+        status: p.status || 'finalizada',
+      }));
+
+    const fallback = [
+      { cover: 'https://images.unsplash.com/photo-1501183638710-841dd1904471?w=1600&q=80', title: 'Casa Las Lomas', location: 'Pilar, Buenos Aires', status: 'finalizada' },
+      { cover: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1600&q=80', title: 'Quinta El Retiro', location: 'Cardales, Buenos Aires', status: 'finalizada' },
+      { cover: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1600&q=80', title: 'Loft Industrial', location: 'Palermo, CABA', status: 'finalizada' },
+      { cover: 'https://images.unsplash.com/photo-1502005229762-cf1b2da7c5d6?w=1600&q=80', title: 'Quinta El Retiro', location: 'Cardales, Buenos Aires', status: 'finalizada' },
+      { cover: 'https://images.unsplash.com/photo-1505873242700-f289a29e1e0f?w=1600&q=80', title: 'Casa del Lago', location: 'San Isidro, Buenos Aires', status: 'finalizada' },
+      { cover: 'https://images.unsplash.com/photo-1494526585095-c41746248156?w=1600&q=80', title: '3 obras entregadas', location: '', status: 'finalizada', compact: true },
+    ];
+    const merged = [...fromProjects];
+    for (let i = merged.length; i < 6; i++) merged.push(fallback[i]);
+    return merged.slice(0, 6);
+  }, [projects]);
+  const leftCards = heroCards.slice(0, 3);
+  const rightCards = heroCards.slice(3, 6);
   return (
-    <section id="top" className="hero">
+    <section id="top" className="hero hero-ref">
       <div className="hero-bg"></div>
       <div className="container hero-inner">
-        <div>
+        <div className="hero-copy">
           <Reveal>
-            <div className="kicker">{site.hero_kicker}</div>
-            <h1 className="hero-title" dangerouslySetInnerHTML={{ __html: site.hero_title.replace(/(que importan\.?|que duran\.?|que inspiran\.?)/i, '<em>$1</em>') }} />
-            <p className="hero-sub">{site.hero_sub}</p>
+            <div className="kicker">SOLUCIONES INTEGRALES EN CONSTRUCCIÓN</div>
+            <h1 className="hero-title">
+              <span className="hero-title-strong">Construimos</span>
+              <br />
+              <span className="hero-title-strong">lugares</span>
+              <br />
+              <span className="hero-title-soft">que</span>
+              <br />
+              <span className="hero-title-soft">importan.</span>
+            </h1>
+            <p className="hero-sub">
+              Más de 15 años desarrollando obras residenciales, comerciales y refacciones premium en Argentina. Diseño,
+              ingeniería y ejecución bajo un mismo equipo.
+            </p>
             <div className="hero-ctas">
               <a className="btn btn-primary" href="#tester">
                 Probar materiales con IA
@@ -163,14 +203,46 @@ function Hero() {
           </Reveal>
         </div>
         <Reveal className="reveal-up">
-          <div className="hero-visual">
-            <img src={featured?.cover || 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1400&q=80'} alt="Obra destacada" />
-            <div className="hero-visual-badges">
-              <div className="badge"><span className="dot"></span>Obra en curso · {featured?.title}</div>
-              <div className="badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                {featured?.location}
+          <div className="hero-media">
+            <div className="hero-stack">
+              <div className="hero-col up" aria-hidden="true">
+                {leftCards.map((p, i) => (
+                  <div className="hero-card" key={p.id || p.cover || i}>
+                    <img src={p.cover || p.photo} alt="" />
+                    <div className="hero-card-overlay">
+                      <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'EN PROCESO' : 'FINALIZADA'}</span>
+                      <div className="hero-card-meta">
+                        <div className="t">{p.title}</div>
+                        <div className="s">{p.location}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
+              <div className="hero-col down" aria-hidden="true">
+                {rightCards.map((p, i) => (
+                  <div className={`hero-card ${p.compact ? 'compact' : ''}`} key={p.id || p.cover || i}>
+                    {p.compact ? null : <img src={p.cover || p.photo} alt="" />}
+                    <div className="hero-card-overlay">
+                      {p.compact ? (
+                        <div className="hero-card-compact">
+                          <span className="hero-compact-pill">{p.title}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'FINALIZANDO' : 'FINALIZADA'}</span>
+                          <div className="hero-card-meta">
+                            <div className="t">{p.title}</div>
+                            {p.location ? <div className="s">{p.location}</div> : null}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hero-stack-fade top" aria-hidden="true"></div>
+              <div className="hero-stack-fade bottom" aria-hidden="true"></div>
             </div>
           </div>
         </Reveal>
@@ -310,7 +382,7 @@ function Materiales() {
   const filtered = cat === 'Todos' ? materials : materials.filter((m) => m.category === cat);
 
   return (
-    <section id="materiales">
+    <section id="materiales" className="section-dark">
       <div className="container">
         <div className="section-header">
           <Reveal>
@@ -350,7 +422,7 @@ function Materiales() {
 // ───────────────────────── Tester section ─────────────────────────
 function TesterSection() {
   return (
-    <section id="tester" style={{ background: 'var(--bg-2)' }}>
+    <section id="tester" className="section-dark">
       <div className="container">
         <div className="section-header">
           <Reveal>
@@ -371,7 +443,7 @@ function TesterSection() {
 function Testimonios() {
   const items = useStore('testimonials');
   return (
-    <section id="testimonios">
+    <section id="testimonios" className="section-light">
       <div className="container">
         <div className="section-header">
           <Reveal>
@@ -455,7 +527,7 @@ function Contacto({ onSubmitToast }) {
   };
 
   return (
-    <section id="contacto" style={{ background: 'linear-gradient(180deg, var(--bg-2), transparent)' }}>
+    <section id="contacto" className="section-dark">
       <div className="container">
         <div className="contact-grid">
           <Reveal>
