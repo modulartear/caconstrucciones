@@ -247,18 +247,6 @@ function Hero() {
           </div>
         </Reveal>
       </div>
-      <div className="container">
-        <Reveal className="stagger" >
-          <div className="hero-stats">
-            {site.stats.map((s, i) => (
-              <div className="stat" key={i}>
-                <div className="v">{s.value}</div>
-                <div className="l">{s.label}</div>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </div>
     </section>
   );
 }

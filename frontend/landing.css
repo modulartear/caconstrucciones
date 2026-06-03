@@ -177,9 +177,9 @@ body.landing-ref .section-light .kicker::before { background: rgba(181,122,21,0.
 .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
 
 body.landing-ref .hero.hero-ref { padding: 150px 0 110px; }
-body.landing-ref .hero.hero-ref .container { max-width: 1560px; }
-body.landing-ref .hero.hero-ref .hero-inner { grid-template-columns: minmax(520px, 1.05fr) minmax(620px, 1fr); }
-body.landing-ref .hero.hero-ref .hero-media { justify-self: end; width: 100%; max-width: 720px; position: relative; z-index: 1; }
+body.landing-ref .hero.hero-ref .container { max-width: 1680px; }
+body.landing-ref .hero.hero-ref .hero-inner { grid-template-columns: minmax(520px, 1fr) minmax(880px, 1.25fr); }
+body.landing-ref .hero.hero-ref .hero-media { justify-self: end; width: 100%; max-width: 980px; position: relative; z-index: 1; }
 body.landing-ref .hero.hero-ref .hero-stack { width: 100%; margin-left: auto; }
 body.landing-ref .hero.hero-ref .kicker { color: rgba(31,37,42,0.70); }
 body.landing-ref .hero.hero-ref .kicker::before { background: rgba(181,122,21,0.9); width: 22px; }
