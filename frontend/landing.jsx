@@ -204,49 +204,50 @@ function Hero() {
         </div>
         <Reveal className="reveal-up">
           <div className="hero-media">
-            <div className="hero-stack">
-              <div className="hero-col up" aria-hidden="true">
-                <div className="hero-col-track">
-                  {[...leftCards, ...leftCards].map((p, i) => (
-                    <div className="hero-card" key={(p.id || p.cover || p.title || 'l') + '-' + i}>
+            <div className="moving-showcase" aria-hidden="true">
+              <div className="ms-col up">
+                <div className="ms-track">
+                  {[...leftCards, ...leftCards, ...leftCards].map((p, i) => (
+                    <figure className="ms-card" key={(p.id || p.cover || p.title || 'l') + '-' + i}>
                       <img src={p.cover || p.photo} alt="" />
-                      <div className="hero-card-overlay">
-                        <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'EN PROCESO' : 'FINALIZADA'}</span>
-                        <div className="hero-card-meta">
-                          <div className="t">{p.title}</div>
-                          <div className="s">{p.location}</div>
-                        </div>
-                      </div>
-                    </div>
+                      <figcaption>
+                        <span className={`ms-tag ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'EN PROCESO' : 'FINALIZADA'}</span>
+                        <div className="ms-title">{p.title}</div>
+                        <div className="ms-loc">{p.location}</div>
+                      </figcaption>
+                    </figure>
                   ))}
                 </div>
               </div>
-              <div className="hero-col down" aria-hidden="true">
-                <div className="hero-col-track">
-                  {[...rightCards, ...rightCards].map((p, i) => (
-                    <div className={`hero-card ${p.compact ? 'compact' : ''}`} key={(p.id || p.cover || p.title || 'r') + '-' + i}>
+              <div className="ms-col down">
+                <div className="ms-track">
+                  {[...rightCards, ...rightCards, ...rightCards].map((p, i) => (
+                    <figure className={`ms-card ${p.compact ? 'compact' : ''}`} key={(p.id || p.cover || p.title || 'r') + '-' + i}>
                       {p.compact ? null : <img src={p.cover || p.photo} alt="" />}
-                      <div className="hero-card-overlay">
-                        {p.compact ? (
-                          <div className="hero-card-compact">
-                            <span className="hero-compact-pill">{p.title}</span>
-                          </div>
-                        ) : (
-                          <>
-                            <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'FINALIZANDO' : 'FINALIZADA'}</span>
-                            <div className="hero-card-meta">
-                              <div className="t">{p.title}</div>
-                              {p.location ? <div className="s">{p.location}</div> : null}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                      {p.compact ? (
+                        <figcaption>
+                          <span className="ms-count-pill">{p.title}</span>
+                        </figcaption>
+                      ) : (
+                        <figcaption>
+                          <span className={`ms-tag ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'FINALIZANDO' : 'FINALIZADA'}</span>
+                          <div className="ms-title">{p.title}</div>
+                          {p.location ? <div className="ms-loc">{p.location}</div> : null}
+                        </figcaption>
+                      )}
+                    </figure>
                   ))}
                 </div>
               </div>
-              <div className="hero-stack-fade top" aria-hidden="true"></div>
-              <div className="hero-stack-fade bottom" aria-hidden="true"></div>
+              <div className="ms-fade top"></div>
+              <div className="ms-fade bottom"></div>
+              <div className="ms-overlay">
+                <div className="ms-now">
+                  <span className="ms-pulse"></span>
+                  Obra terminada · <b>{leftCards[0]?.title || 'Casa Las Lomas'}</b>
+                </div>
+                <div className="ms-count">{Math.max(3, (projects || []).length)} obras entregadas</div>
+              </div>
             </div>
           </div>
         </Reveal>
