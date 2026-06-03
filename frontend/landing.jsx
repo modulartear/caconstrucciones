@@ -621,6 +621,11 @@ function App() {
   const [toast, setToast] = useState(null);
   const site = useStore('site');
 
+  useEffect(() => {
+    document.body.classList.add('landing-ref');
+    return () => document.body.classList.remove('landing-ref');
+  }, []);
+
   return (
     <>
       <Nav onOpenLogin={() => setLoginOpen(true)} site={site} />

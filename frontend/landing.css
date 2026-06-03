@@ -1,4 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
 /* Landing-specific */
+
+body.landing-ref {
+  --bg: #cdd2d6;
+  --bg-2: #e3e7ea;
+  --surface: rgba(255,255,255,0.78);
+  --surface-2: #ffffff;
+  --border: rgba(47,54,60,0.12);
+  --border-2: rgba(47,54,60,0.18);
+  --text: #2f363c;
+  --muted: #5a636a;
+  --muted-2: #6b757d;
+  --accent: #2f363c;
+  --accent-2: #5a636a;
+  --accent-deep: #1f252a;
+  --shadow-lg: 0 30px 80px -34px rgba(47,54,60,0.35), 0 0 0 1px rgba(47,54,60,0.06);
+  --shadow-glow: 0 0 60px rgba(90,99,106,0.18);
+  --font-display: 'Montserrat', system-ui, -apple-system, sans-serif;
+  --font-body: 'Montserrat', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body.landing-ref .grain { opacity: 0.018; }
+body.landing-ref ::selection { background: rgba(47,54,60,0.22); color: var(--text); }
+
+body.landing-ref .btn-primary { color: #ffffff; }
+
+body.landing-ref .nav { background: rgba(255,255,255,0.55); }
+body.landing-ref .nav.scrolled { background: rgba(255,255,255,0.86); }
+body.landing-ref .nav-links a:hover { background: rgba(0,0,0,0.04); }
+body.landing-ref .mobile-menu { background: rgba(255,255,255,0.96); }
+
+body.landing-ref .hero-bg {
+  background:
+    radial-gradient(760px 520px at 18% 28%, rgba(90,99,106,0.22), transparent 60%),
+    radial-gradient(980px 760px at 100% 82%, rgba(47,54,60,0.20), transparent 60%);
+}
+body.landing-ref .hero-bg::after {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40'><path d='M40 0H0V40' fill='none' stroke='%232f363c' stroke-opacity='0.06' stroke-width='1'/></svg>");
+}
+body.landing-ref .hero-visual::after { background: linear-gradient(180deg, transparent 48%, rgba(47,54,60,0.68)); }
+body.landing-ref .hero-visual .badge { background: rgba(255,255,255,0.72); border: 1px solid rgba(47,54,60,0.14); }
+
+body.landing-ref .service::before { background: radial-gradient(400px 200px at var(--mx, 50%) var(--my, 50%), rgba(90,99,106,0.16), transparent 60%); }
+body.landing-ref .filter-btn.active { color: var(--bg); }
+body.landing-ref .obra-status.proceso { background: rgba(90,99,106,0.22); color: var(--accent); border: 1px solid rgba(47,54,60,0.22); }
+
+body.landing-ref .tester-header .ai-pill { background: rgba(90,99,106,0.14); border: 1px solid rgba(47,54,60,0.16); color: var(--text); }
+body.landing-ref .tester-drop.dragging { background: rgba(90,99,106,0.10); }
+body.landing-ref .tester-mat.active { box-shadow: 0 0 0 3px rgba(47,54,60,0.14); }
+body.landing-ref .tool-btn.active { color: #ffffff; }
+body.landing-ref .ai-suggest { background: linear-gradient(135deg, rgba(90,99,106,0.14), rgba(255,255,255,0.35)); border: 1px solid rgba(47,54,60,0.14); }
+body.landing-ref .toast .check { color: #ffffff; }
+body.landing-ref .ca-viz-preview figcaption { background: var(--text); color: var(--bg); }
 
 /* Nav */
 .nav {
