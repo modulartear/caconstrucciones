@@ -212,8 +212,8 @@ body.landing-ref .hero.hero-ref .moving-showcase {
 
 body.landing-ref .hero.hero-ref .ms-col { position: relative; height: 100%; overflow: hidden; }
 body.landing-ref .hero.hero-ref .ms-track { display: flex; flex-direction: column; gap: 16px; padding-bottom: 16px; will-change: transform; }
-body.landing-ref .hero.hero-ref .ms-col.up .ms-track { animation: msScrollUp 34s linear infinite; }
-body.landing-ref .hero.hero-ref .ms-col.down .ms-track { transform: translateY(-33.33%); animation: msScrollDown 34s linear infinite; }
+body.landing-ref .hero.hero-ref .ms-col.up .ms-track { animation: msScrollUp 70s linear infinite; }
+body.landing-ref .hero.hero-ref .ms-col.down .ms-track { transform: translateY(-33.33%); animation: msScrollDown 70s linear infinite; }
 
 @keyframes msScrollUp { from { transform: translateY(0); } to { transform: translateY(-33.33%); } }
 @keyframes msScrollDown { from { transform: translateY(-33.33%); } to { transform: translateY(0); } }
