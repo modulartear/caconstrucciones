@@ -206,40 +206,44 @@ function Hero() {
           <div className="hero-media">
             <div className="hero-stack">
               <div className="hero-col up" aria-hidden="true">
-                {leftCards.map((p, i) => (
-                  <div className="hero-card" key={p.id || p.cover || i}>
-                    <img src={p.cover || p.photo} alt="" />
-                    <div className="hero-card-overlay">
-                      <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'EN PROCESO' : 'FINALIZADA'}</span>
-                      <div className="hero-card-meta">
-                        <div className="t">{p.title}</div>
-                        <div className="s">{p.location}</div>
+                <div className="hero-col-track">
+                  {[...leftCards, ...leftCards].map((p, i) => (
+                    <div className="hero-card" key={(p.id || p.cover || p.title || 'l') + '-' + i}>
+                      <img src={p.cover || p.photo} alt="" />
+                      <div className="hero-card-overlay">
+                        <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'EN PROCESO' : 'FINALIZADA'}</span>
+                        <div className="hero-card-meta">
+                          <div className="t">{p.title}</div>
+                          <div className="s">{p.location}</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
               <div className="hero-col down" aria-hidden="true">
-                {rightCards.map((p, i) => (
-                  <div className={`hero-card ${p.compact ? 'compact' : ''}`} key={p.id || p.cover || i}>
-                    {p.compact ? null : <img src={p.cover || p.photo} alt="" />}
-                    <div className="hero-card-overlay">
-                      {p.compact ? (
-                        <div className="hero-card-compact">
-                          <span className="hero-compact-pill">{p.title}</span>
-                        </div>
-                      ) : (
-                        <>
-                          <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'FINALIZANDO' : 'FINALIZADA'}</span>
-                          <div className="hero-card-meta">
-                            <div className="t">{p.title}</div>
-                            {p.location ? <div className="s">{p.location}</div> : null}
+                <div className="hero-col-track">
+                  {[...rightCards, ...rightCards].map((p, i) => (
+                    <div className={`hero-card ${p.compact ? 'compact' : ''}`} key={(p.id || p.cover || p.title || 'r') + '-' + i}>
+                      {p.compact ? null : <img src={p.cover || p.photo} alt="" />}
+                      <div className="hero-card-overlay">
+                        {p.compact ? (
+                          <div className="hero-card-compact">
+                            <span className="hero-compact-pill">{p.title}</span>
                           </div>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <span className={`hero-pill ${p.status === 'en-proceso' ? 'proceso' : 'finalizada'}`}>{p.status === 'en-proceso' ? 'FINALIZANDO' : 'FINALIZADA'}</span>
+                            <div className="hero-card-meta">
+                              <div className="t">{p.title}</div>
+                              {p.location ? <div className="s">{p.location}</div> : null}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
               <div className="hero-stack-fade top" aria-hidden="true"></div>
               <div className="hero-stack-fade bottom" aria-hidden="true"></div>

@@ -186,6 +186,22 @@ body.landing-ref .hero.hero-ref .kicker::before { background: rgba(181,122,21,0.
 body.landing-ref .hero.hero-ref .btn-ghost { background: rgba(255,255,255,0.55); border-color: rgba(31,37,42,0.18); color: rgba(31,37,42,0.9); }
 body.landing-ref .hero.hero-ref .btn-ghost:hover { background: rgba(255,255,255,0.72); border-color: rgba(31,37,42,0.22); }
 
+body.landing-ref .hero.hero-ref .hero-stack { --hero-gap: 16px; }
+body.landing-ref .hero.hero-ref .hero-col { position: relative; height: 100%; overflow: hidden; }
+body.landing-ref .hero.hero-ref .hero-col-track { display: flex; flex-direction: column; padding-bottom: var(--hero-gap); }
+body.landing-ref .hero.hero-ref .hero-card { margin-bottom: var(--hero-gap); height: calc((100% - (var(--hero-gap) * 2)) / 3); }
+
+body.landing-ref .hero.hero-ref .hero-col.up .hero-col-track { animation: heroScrollUp 20s linear infinite; will-change: transform; }
+body.landing-ref .hero.hero-ref .hero-col.down .hero-col-track { transform: translateY(-50%); animation: heroScrollDown 20s linear infinite; will-change: transform; }
+
+@keyframes heroScrollUp { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@keyframes heroScrollDown { from { transform: translateY(-50%); } to { transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  body.landing-ref .hero.hero-ref .hero-col.up .hero-col-track,
+  body.landing-ref .hero.hero-ref .hero-col.down .hero-col-track { animation: none; transform: translateY(0); }
+}
+
 .hero-media { width: 100%; justify-self: end; }
 .hero-stack {
   position: relative;
