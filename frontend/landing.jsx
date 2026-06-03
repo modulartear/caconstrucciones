@@ -599,6 +599,9 @@ function Footer({ site }) {
           <div className="footer-credits" style={{ marginTop: 14 }}>
             © {new Date().getFullYear()} CA Construcciones · Todos los derechos reservados
           </div>
+          <div className="footer-madeby" style={{ marginTop: 10 }}>
+            Hecho con orgullo en Venado Tuerto por DiseArte
+          </div>
         </div>
         <div className="footer-links">
           <a href="#obras">Obras</a>

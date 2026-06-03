@@ -626,6 +626,7 @@ body.landing-ref #contacto.section-dark form.card select:focus {
 footer { padding: 60px 0 30px; border-top: 1px solid var(--border); margin-top: 40px; }
 .footer-inner { display: flex; justify-content: space-between; gap: 40px; align-items: flex-end; flex-wrap: wrap; }
 .footer-credits { color: var(--muted); font-size: 13px; }
+.footer-madeby { color: var(--muted); font-size: 12px; }
 .footer-credits a { color: var(--text); border-bottom: 1px dashed var(--border-2); }
 .footer-links { display: flex; gap: 18px; }
 .footer-links a { color: var(--muted); font-size: 13px; }
