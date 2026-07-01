@@ -931,7 +931,9 @@ function SimpleCRUDForm({ title, initial, fields, onClose, onSave }) {
         {fields.map((f) => (
           <div key={f.key} className={f.full ? 'full' : ''}>
             <label>{f.label}</label>
-            {f.type === 'textarea' ? (
+            {f.type === 'photo' ? (
+              <PhotoInput value={it[f.key]} onChange={(v) => setIt({ ...it, [f.key]: v })} hint={f.placeholder || 'Subí una imagen'} />
+            ) : f.type === 'textarea' ? (
               <textarea rows="3" value={it[f.key] || ''} onChange={(e) => setIt({ ...it, [f.key]: e.target.value })} placeholder={f.placeholder} />
             ) : f.type === 'select' ? (
               <select value={it[f.key]} onChange={(e) => setIt({ ...it, [f.key]: e.target.value })}>
@@ -1027,6 +1029,17 @@ function ConfigPage({ toast }) {
           <div><label>Teléfono</label><input value={s.contact.phone} onChange={(e) => setS({ ...s, contact: { ...s.contact, phone: e.target.value } })} /></div>
           <div><label>Email</label><input value={s.contact.email} onChange={(e) => setS({ ...s, contact: { ...s.contact, email: e.target.value } })} /></div>
           <div><label>Dirección</label><input value={s.contact.address} onChange={(e) => setS({ ...s, contact: { ...s.contact, address: e.target.value } })} /></div>
+          <div className="full">
+            <label>WhatsApp</label>
+            <input
+              value={s.contact.whatsapp || ''}
+              onChange={(e) => setS({ ...s, contact: { ...s.contact, whatsapp: e.target.value } })}
+              placeholder="Ej: 5493511234567 (código de país + área, sin espacios ni signos)"
+            />
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>
+              Se usa para el botón flotante de WhatsApp de la landing. Ingresá solo números con código de país.
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1179,8 +1192,18 @@ function App() {
             sub="Marcas con las que trabajamos, visibles en la landing."
             storeKey="brands"
             toast={showToast}
-            fields={[{ key: 'name', label: 'Nombre de la marca', full: true }]}
-            displayCols={[{ key: 'name', label: 'Marca', render: (b) => <b style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{b.name}</b> }]}
+            fields={[
+              { key: 'logo', label: 'Logo de la marca', type: 'photo', full: true, placeholder: 'Subí el logo de la marca' },
+              { key: 'name', label: 'Nombre de la marca', full: true },
+            ]}
+            displayCols={[
+              {
+                key: 'logo', label: 'Logo', render: (b) => b.logo
+                  ? <img src={b.logo} alt="" style={{ width: 44, height: 44, objectFit: 'contain', borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
+                  : <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
+              },
+              { key: 'name', label: 'Marca', render: (b) => <b style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{b.name}</b> },
+            ]}
           />
         )}
         {page === 'config' && <ConfigPage toast={showToast} />}
