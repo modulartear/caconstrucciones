@@ -37,8 +37,15 @@ function Draw-Shape {
     [hashtable]$Shape
   )
 
-  $alpha = if ($Shape.ContainsKey('alpha')) { [Math]::Round([double]$Shape.alpha * 255) } else { 255 }
-  $brush = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb([int]$alpha, 255, 255, 255))
+  if ($Shape.ContainsKey('color')) {
+    $colorSpec = $Shape.color
+    $color = [System.Drawing.Color]::FromArgb([int]$colorSpec[0], [int]$colorSpec[1], [int]$colorSpec[2], [int]$colorSpec[3])
+  } else {
+    $alpha = if ($Shape.ContainsKey('alpha')) { [Math]::Round([double]$Shape.alpha * 255) } else { 255 }
+    $color = [System.Drawing.Color]::FromArgb([int]$alpha, 255, 255, 255)
+  }
+
+  $brush = New-Object System.Drawing.SolidBrush $color
 
   try {
     switch ($Shape.kind) {
@@ -72,13 +79,23 @@ $templates = @(
     source = 'wall-original.png'
     outputs = @(
       @{
+        file = 'wall-mask.png'
+        background = @(0, 0, 0, 0)
+        shapes = @(
+          @{ kind = 'rect'; x = 0; y = 0; width = 1536; height = 122; color = @(255, 0, 0, 0) },
+          @{ kind = 'polygon'; points = @(@(0,0), @(140,0), @(168,1024), @(0,1024)); color = @(255, 0, 0, 0) },
+          @{ kind = 'polygon'; points = @(@(1238,0), @(1536,0), @(1536,1024), @(1218,1024)); color = @(255, 0, 0, 0) },
+          @{ kind = 'rect'; x = 0; y = 780; width = 1536; height = 244; color = @(255, 0, 0, 0) }
+        )
+      }
+      @{
         file = 'wall-occluders.png'
         shapes = @(
-          @{ kind = 'rect'; x = 469; y = 226; width = 142; height = 157; radius = 4 },
-          @{ kind = 'rect'; x = 0; y = 66; width = 102; height = 496; radius = 0 },
-          @{ kind = 'ellipse'; cx = 122; cy = 364; rx = 82; ry = 142; rotation = -8 },
-          @{ kind = 'polygon'; points = @(@(171,404), @(204,392), @(289,390), @(360,394), @(452,392), @(552,393), @(641,390), @(706,398), @(738,411), @(742,531), @(171,531)) },
-          @{ kind = 'polygon'; points = @(@(132,481), @(148,465), @(175,447), @(196,447), @(205,472), @(207,530), @(129,530)) }
+          @{ kind = 'ellipse'; cx = 174; cy = 538; rx = 155; ry = 248; rotation = -4 },
+          @{ kind = 'rect'; x = 712; y = 229; width = 202; height = 233; radius = 4 },
+          @{ kind = 'polygon'; points = @(@(286,552), @(332,527), @(435,523), @(625,529), @(851,526), @(1008,532), @(1076,552), @(1098,580), @(1098,780), @(286,780)) },
+          @{ kind = 'ellipse'; cx = 1216; cy = 620; rx = 50; ry = 47; rotation = 0 },
+          @{ kind = 'rect'; x = 1188; y = 650; width = 66; height = 63; radius = 8 }
         )
       }
     )
@@ -143,7 +160,12 @@ foreach ($template in $templates) {
       try {
         $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
         $graphics.CompositingQuality = [System.Drawing.Drawing2D.CompositingQuality]::HighQuality
-        $graphics.Clear([System.Drawing.Color]::FromArgb(255, 0, 0, 0))
+        if ($output.ContainsKey('background')) {
+          $background = $output.background
+          $graphics.Clear([System.Drawing.Color]::FromArgb([int]$background[0], [int]$background[1], [int]$background[2], [int]$background[3]))
+        } else {
+          $graphics.Clear([System.Drawing.Color]::FromArgb(255, 0, 0, 0))
+        }
         foreach ($shape in $output.shapes) {
           Draw-Shape -Graphics $graphics -Shape $shape
         }
