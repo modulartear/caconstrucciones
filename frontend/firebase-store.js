@@ -19,7 +19,7 @@
     budgets: [],
     clients: [],
     admins: [],
-    site: { hero_kicker: '', hero_title: '', hero_sub: '', stats: [], contact: { phone: '', email: '', address: '' }, logo: null }
+    site: { hero_kicker: '', hero_title: '', hero_sub: '', stats: [], contact: { phone: '', email: '', address: '', whatsapp: '' }, logo: null }
   };
 
   let loadingPromises = {};
