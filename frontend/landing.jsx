@@ -422,7 +422,7 @@ function TesterSection() {
             <div className="kicker">Tecnología CA</div>
             <h2 style={{ marginTop: 18 }}>Probá los materiales en tu obra antes de elegirlos.</h2>
           </Reveal>
-          <Reveal className="reveal-up"><p>Elegí una escena, seleccioná un material y visualizá el resultado con IA sobre paredes, pisos o fachada.</p></Reveal>
+          <Reveal className="reveal-up"><p>Elegí una escena (pared, piso o fachada), tocá un material del catálogo y mirá el antes/después al instante. Si querés, generá además un render fotorrealista con IA.</p></Reveal>
         </div>
         <Reveal>
           <window.VisualizadorIAWidget apiUrl="" clientId="ca-landing" />
@@ -484,7 +484,9 @@ function Marcas() {
         <Reveal>
           <div className="brands-strip">
             {brands.map((b) => (
-              <div key={b.id} className="brand-cell">{b.name}</div>
+              <div key={b.id} className="brand-cell">
+                {b.logo ? <img className="brand-cell-logo" src={b.logo} alt={b.name} title={b.name} /> : b.name}
+              </div>
             ))}
           </div>
         </Reveal>
@@ -614,6 +616,28 @@ function Footer({ site }) {
   );
 }
 
+function WhatsAppButton({ site }) {
+  const digits = String(site?.contact?.whatsapp || site?.contact?.phone || '').replace(/\D/g, '');
+  if (!digits) return null;
+
+  const message = encodeURIComponent('Hola! Quiero consultar sobre un proyecto con CA Construcciones.');
+  return (
+    <a
+      className="whatsapp-fab"
+      href={`https://wa.me/${digits}?text=${message}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Escribinos por WhatsApp"
+      title="Escribinos por WhatsApp"
+    >
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M17.47 14.38c-.29-.15-1.7-.84-1.97-.93-.26-.1-.46-.15-.65.15-.2.29-.75.93-.92 1.12-.17.2-.34.22-.63.08-.29-.15-1.22-.45-2.32-1.43-.86-.76-1.44-1.71-1.61-2-.17-.29-.02-.45.13-.6.13-.13.29-.34.44-.51.15-.17.2-.29.29-.48.1-.2.05-.36-.02-.51-.08-.15-.65-1.58-.9-2.16-.24-.58-.48-.5-.65-.5-.17 0-.36-.02-.56-.02s-.51.08-.78.36c-.26.29-1.02 1-1.02 2.43 0 1.43 1.04 2.82 1.19 3.01.15.2 2.05 3.13 4.97 4.39.69.3 1.24.48 1.66.61.7.22 1.34.19 1.84.12.56-.08 1.7-.7 1.94-1.37.24-.68.24-1.26.17-1.38-.07-.12-.26-.2-.55-.34z" />
+        <path d="M12.02 2C6.5 2 2.02 6.48 2.02 12c0 1.86.51 3.6 1.4 5.1L2 22l5.05-1.33A9.94 9.94 0 0 0 12.02 22c5.52 0 10-4.48 10-10s-4.48-10-10-10zm0 18.13c-1.68 0-3.24-.47-4.57-1.28l-.33-.2-3 .79.8-2.92-.21-.34a8.1 8.1 0 0 1-1.24-4.31c0-4.49 3.65-8.13 8.13-8.13 4.49 0 8.13 3.65 8.13 8.13.02 4.49-3.63 8.26-8.71 8.26z" />
+      </svg>
+    </a>
+  );
+}
+
 // ───────────────────────── Login Modal ─────────────────────────
 async function loginWithAPI(username, password) {
   try {
@@ -708,6 +732,7 @@ function App() {
       <Footer site={site} />
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => { window.location.href = 'admin.html'; }} />}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      <WhatsAppButton site={site} />
     </>
   );
 }

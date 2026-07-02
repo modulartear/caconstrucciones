@@ -3,9 +3,9 @@
   const { useEffect, useMemo, useRef, useState } = React;
 
   const fallbackTemplates = [
-    { id: 'wall', label: 'Pared', target: 'wall', imageUrl: '/visualizador-assets/wall-original.png' },
-    { id: 'floor', label: 'Piso', target: 'floor', imageUrl: '/visualizador-assets/floor-original.png' },
-    { id: 'facade', label: 'Fachada', target: 'facade', imageUrl: '/visualizador-assets/facade-original.png' }
+    { id: 'wall', label: 'Pared', target: 'wall', imageUrl: '/visualizador-assets/wall-original.png', maskUrl: '/visualizador-assets/wall-mask.png' },
+    { id: 'floor', label: 'Piso', target: 'floor', imageUrl: '/visualizador-assets/floor-original.png', maskUrl: '/visualizador-assets/floor-mask.png' },
+    { id: 'facade', label: 'Fachada', target: 'facade', imageUrl: '/visualizador-assets/facade-original.png', maskUrl: '/visualizador-assets/facade-mask.png' }
   ];
 
   const labels = { wall: 'Pared', floor: 'Piso', facade: 'Fachada' };
@@ -53,6 +53,8 @@
     const [materials, setMaterials] = useState([]);
     const [materialId, setMaterialId] = useState('');
     const [resultUrl, setResultUrl] = useState(null);
+    const [quickPreviewUrl, setQuickPreviewUrl] = useState(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
     const [status, setStatus] = useState('idle');
     const [usage, setUsage] = useState({ count: 0, registered: false, limit: 2 });
     const [showLead, setShowLead] = useState(false);
@@ -80,6 +82,26 @@
       if (!selectedMaterial && targetMaterials[0]) setMaterialId(targetMaterials[0].id);
     }, [selectedMaterial, targetMaterials]);
 
+    useEffect(() => {
+      if (!selectedMaterial || !selectedTemplate) {
+        setQuickPreviewUrl(null);
+        setPreviewLoading(false);
+        return;
+      }
+
+      let cancelled = false;
+      setPreviewLoading(true);
+      buildInstantComposite(selectedTemplate, selectedMaterial).then((url) => {
+        if (cancelled) return;
+        setQuickPreviewUrl(url);
+        setPreviewLoading(false);
+      });
+
+      return () => {
+        cancelled = true;
+      };
+    }, [selectedTemplate?.id, selectedTemplate?.maskUrl, selectedMaterial?.id, selectedMaterial?.photo, selectedMaterial?.swatch, selectedMaterial?.color]);
+
     function refreshUsage() {
       fetch(`${apiUrl}/api/usage/${sessionId}`)
         .then((r) => r.json())
@@ -94,6 +116,7 @@
       setSelectedTemplateId(templateId);
       setMaterialId(nextMaterials[0]?.id || '');
       setResultUrl(null);
+      setQuickPreviewUrl(null);
       setBudgetSent(false);
       setError('');
     }
@@ -167,26 +190,24 @@
           </div>
 
           <button className="ca-viz-generate" disabled={status !== 'idle' || !selectedMaterial} onClick={generate}>
-            {status === 'generating' ? 'Generando...' : 'Visualizar'}
+            {status === 'generating' ? 'Generando...' : 'Generar render fotorrealista con IA'}
           </button>
         </div>
 
         {showLead && <LeadForm apiUrl={apiUrl} clientId={clientId} sessionId={sessionId} setUsage={setUsage} setShowLead={setShowLead} setError={setError} />}
 
-        <div className="ca-viz-preview">
-          <figure>
-            <img src={selectedTemplate.imageUrl} alt="Escena original" />
-            <figcaption>Antes</figcaption>
-          </figure>
-          <figure>
-            {resultUrl ? <img src={resultUrl} alt="Visualización generada" /> : <div className="ca-viz-empty">Resultado IA</div>}
-            <figcaption>Después</figcaption>
-          </figure>
-        </div>
+        <CompareSlider
+          beforeSrc={selectedTemplate.imageUrl}
+          afterSrc={resultUrl || quickPreviewUrl}
+          beforeLabel="Antes"
+          afterLabel={resultUrl ? 'Después (render IA)' : 'Después (vista previa)'}
+          loadingLabel={previewLoading ? 'Generando vista previa...' : 'Elegí un material'}
+        />
 
         <div className="ca-viz-footer">
           <span>Escena: {selectedTemplate.label}</span>
-          <span>Generaciones: {usage.registered ? 'registrado' : `${usage.count}/${usage.limit}`}</span>
+          <span>{resultUrl ? 'Mostrando render fotorrealista con IA' : 'Vista previa instantánea del material elegido'}</span>
+          <span>Generaciones IA: {usage.registered ? 'registrado' : `${usage.count}/${usage.limit}`}</span>
           {error && <strong>{error}</strong>}
         </div>
 
@@ -214,6 +235,98 @@
       return <img className="ca-viz-material-photo" src={material.photo} alt="" loading="lazy" />;
     }
     return <span className="ca-viz-swatch" style={{ background: material.swatch || '#ccc' }}></span>;
+  }
+
+  async function buildInstantComposite(template, material) {
+    if (!template?.imageUrl || !template?.maskUrl) return null;
+
+    try {
+      const [baseImg, maskImg] = await Promise.all([loadImage(template.imageUrl), loadImage(template.maskUrl)]);
+      const width = baseImg.naturalWidth || baseImg.width;
+      const height = baseImg.naturalHeight || baseImg.height;
+      if (!width || !height) return null;
+
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = width;
+      maskCanvas.height = height;
+      const maskCtx = maskCanvas.getContext('2d');
+      maskCtx.drawImage(maskImg, 0, 0, width, height);
+      const maskData = maskCtx.getImageData(0, 0, width, height);
+
+      const layerCanvas = document.createElement('canvas');
+      layerCanvas.width = width;
+      layerCanvas.height = height;
+      const layerCtx = layerCanvas.getContext('2d');
+
+      if (material?.photo) {
+        const matImg = await loadImage(material.photo);
+        const tileSize = 280;
+        const tileCanvas = document.createElement('canvas');
+        tileCanvas.width = tileSize;
+        tileCanvas.height = tileSize;
+        tileCanvas.getContext('2d').drawImage(matImg, 0, 0, tileSize, tileSize);
+        layerCtx.fillStyle = layerCtx.createPattern(tileCanvas, 'repeat');
+      } else {
+        layerCtx.fillStyle = material?.swatch || material?.color || '#b8b7b0';
+      }
+      layerCtx.fillRect(0, 0, width, height);
+
+      const layerData = layerCtx.getImageData(0, 0, width, height);
+      const layerPixels = layerData.data;
+      const maskPixels = maskData.data;
+      for (let i = 3; i < layerPixels.length; i += 4) {
+        layerPixels[i] = 255 - maskPixels[i];
+      }
+      layerCtx.putImageData(layerData, 0, 0);
+
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = width;
+      outCanvas.height = height;
+      const outCtx = outCanvas.getContext('2d');
+      outCtx.drawImage(baseImg, 0, 0, width, height);
+      outCtx.drawImage(layerCanvas, 0, 0);
+
+      return outCanvas.toDataURL('image/png');
+    } catch (err) {
+      console.warn('No se pudo generar la vista previa instantánea:', err);
+      return null;
+    }
+  }
+
+  function CompareSlider({ beforeSrc, afterSrc, beforeLabel = 'Antes', afterLabel = 'Después', loadingLabel = '' }) {
+    const [percent, setPercent] = useState(50);
+
+    return (
+      <div className="ca-compare">
+        <div className="ca-compare-frame">
+          {afterSrc ? (
+            <img className="ca-compare-img ca-compare-after" src={afterSrc} alt={afterLabel} />
+          ) : (
+            <div className="ca-compare-img ca-compare-empty">{loadingLabel || afterLabel}</div>
+          )}
+          {beforeSrc && (
+            <img
+              className="ca-compare-img ca-compare-before"
+              src={beforeSrc}
+              alt={beforeLabel}
+              style={{ clipPath: `inset(0 ${100 - percent}% 0 0)` }}
+            />
+          )}
+          <div className="ca-compare-line" style={{ left: `${percent}%` }} />
+          <span className="ca-compare-tag ca-compare-tag-before">{beforeLabel}</span>
+          <span className="ca-compare-tag ca-compare-tag-after">{afterLabel}</span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={percent}
+          onChange={(e) => setPercent(Number(e.target.value))}
+          className="ca-compare-range"
+          aria-label="Deslizar para comparar antes y después"
+        />
+      </div>
+    );
   }
 
   function LeadForm({ apiUrl, clientId, sessionId, setUsage, setShowLead, setError }) {
