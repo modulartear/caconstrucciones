@@ -221,6 +221,32 @@ async function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 
   });
 }
 
+async function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function fileToPngDataUrl(file) {
+  const source = await readFileAsDataUrl(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = source;
+  });
+}
+
 function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2 }) {
   const [err, setErr] = useState(null);
   const onFile = async (file) => {
@@ -1054,6 +1080,165 @@ function ConfigPage({ toast }) {
   );
 }
 
+function VisualizadorMasksPage({ toast }) {
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState('');
+
+  const loadMasks = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/template-masks');
+      const data = await res.json();
+      setTemplates(Array.isArray(data.templates) ? data.templates : []);
+    } catch (error) {
+      console.error('Error cargando mascaras:', error);
+      setTemplates([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadMasks();
+  }, []);
+
+  const saveMaskFromFile = async (templateId, maskType, file) => {
+    if (!file) return;
+    const token = `${templateId}-${maskType}-save`;
+    setBusy(token);
+    try {
+      const imageDataUrl = await fileToPngDataUrl(file);
+      const res = await fetch('/api/save-mask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId, maskType, imageDataUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo guardar la mascara.');
+      toast(`Mascara ${maskType === 'surface' ? 'de superficie' : 'de oclusores'} guardada`);
+      await loadMasks();
+    } catch (error) {
+      console.error(error);
+      toast(error.message || 'Error guardando mascara');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const restoreMask = async (templateId, maskType) => {
+    const token = `${templateId}-${maskType}-restore`;
+    setBusy(token);
+    try {
+      const res = await fetch('/api/restore-mask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ templateId, maskType })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'No se pudo restaurar la mascara.');
+      toast(`Mascara ${maskType === 'surface' ? 'de superficie' : 'de oclusores'} restaurada`);
+      await loadMasks();
+    } catch (error) {
+      console.error(error);
+      toast(error.message || 'Error restaurando mascara');
+    } finally {
+      setBusy('');
+    }
+  };
+
+  return (
+    <>
+      <div className="page-head">
+        <div>
+          <h1>Máscaras del Visualizador</h1>
+          <p>Gestioná superficie, oclusores y sombras de cada escena del visualizador.</p>
+        </div>
+        <div className="actions">
+          <button className="btn btn-sm" onClick={loadMasks} disabled={loading}>{loading ? 'Actualizando…' : 'Actualizar'}</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="panel"><div className="empty-state">Cargando máscaras del visualizador…</div></div>
+      ) : (
+        <div className="mask-admin-grid">
+          {templates.map((template) => (
+            <div key={template.id} className="panel">
+              <div className="panel-head">
+                <div>
+                  <h3>{template.label}</h3>
+                  <div className="sub" style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>{template.target}</div>
+                </div>
+                <a className="btn btn-ghost btn-sm" href={template.imageUrl} target="_blank" rel="noreferrer">Ver escena</a>
+              </div>
+              <div className="panel-body padded">
+                <div className="mask-scene-preview">
+                  <img src={template.imageUrl} alt="" />
+                </div>
+                <div className="mask-asset-list">
+                  <MaskAssetCard
+                    title="Superficie"
+                    mask={template.masks.surface}
+                    canRestore={Boolean(template.masks.surface?.backupPublicUrl)}
+                    busy={busy === `${template.id}-surface-save` || busy === `${template.id}-surface-restore`}
+                    onUpload={(file) => saveMaskFromFile(template.id, 'surface', file)}
+                    onRestore={() => restoreMask(template.id, 'surface')}
+                  />
+                  <MaskAssetCard
+                    title="Oclusores"
+                    mask={template.masks.occluders}
+                    canRestore={Boolean(template.masks.occluders?.backupPublicUrl)}
+                    busy={busy === `${template.id}-occluders-save` || busy === `${template.id}-occluders-restore`}
+                    onUpload={(file) => saveMaskFromFile(template.id, 'occluders', file)}
+                    onRestore={() => restoreMask(template.id, 'occluders')}
+                  />
+                  {template.masks.shadows && (
+                    <MaskAssetCard
+                      title="Sombras"
+                      mask={template.masks.shadows}
+                      readonly
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function MaskAssetCard({ title, mask, busy = false, canRestore = false, onUpload, onRestore, readonly = false }) {
+  const inputRef = useRef(null);
+  const previewUrl = mask?.publicUrl ? `${mask.publicUrl}${mask.updatedAt ? `?v=${encodeURIComponent(mask.updatedAt)}` : ''}` : '';
+
+  return (
+    <div className="mask-asset-card">
+      <div className="mask-asset-head">
+        <strong>{title}</strong>
+        {mask?.updatedAt && <span>{new Date(mask.updatedAt).toLocaleString('es-AR')}</span>}
+      </div>
+      <div className="mask-asset-preview">
+        {mask?.exists && previewUrl ? <img src={previewUrl} alt="" /> : <div className="empty-state" style={{ padding: 18 }}>Sin archivo</div>}
+      </div>
+      <div className="mask-asset-actions">
+        {mask?.publicUrl && mask.exists && <a className="btn btn-ghost btn-sm" href={previewUrl} download>Descargar</a>}
+        {!readonly && (
+          <>
+            <button className="btn btn-sm" type="button" disabled={busy} onClick={() => inputRef.current?.click()}>
+              {busy ? 'Procesando…' : 'Reemplazar PNG'}
+            </button>
+            {canRestore && <button className="btn btn-ghost btn-sm" type="button" disabled={busy} onClick={onRestore}>Restaurar original</button>}
+            <input ref={inputRef} type="file" accept="image/png,image/*" style={{ display: 'none' }} onChange={(e) => onUpload?.(e.target.files?.[0])} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 // SHELL
 // ═══════════════════════════════════════════════════════════
@@ -1062,6 +1247,7 @@ const PAGES = [
   { id: 'materiales', label: 'Materiales', icon: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z' },
   { id: 'obras', label: 'Obras', icon: 'M3 21h18M5 21V8l7-5 7 5v13M9 21v-7h6v7' },
   { id: 'presupuestos', label: 'Presupuestos', icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8' },
+  { id: 'visualizador', label: 'Máscaras IA', icon: 'M4 4h16v16H4z M9 4v16 M15 4v16 M4 9h16 M4 15h16' },
   { id: 'clientes', label: 'Clientes', icon: 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M8.5 7.5a4 4 0 1 1-8 0 4 4 0 0 1 8 0' },
   { id: 'usuarios', label: 'Usuarios', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z' },
   { id: 'testimonios', label: 'Testimonios', icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z' },
@@ -1128,6 +1314,7 @@ function App() {
         {page === 'materiales' && <MaterialesPage toast={showToast} />}
         {page === 'obras' && <ObrasPage toast={showToast} />}
         {page === 'presupuestos' && <PresupuestosPage toast={showToast} />}
+        {page === 'visualizador' && <VisualizadorMasksPage toast={showToast} />}
         {page === 'clientes' && (
           <SimpleCRUD
             title="Clientes"

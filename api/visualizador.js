@@ -5,8 +5,11 @@ import {
   findWidgetMaterial,
   generateWithOpenAI,
   getUsage,
+  listTemplateMaskAssets,
   loadWidgetMaterials,
   recordGeneration,
+  restoreTemplateMaskAsset,
+  saveTemplateMaskAsset,
   saveLead,
   saveVisualizerBudget,
   setCors,
@@ -31,9 +34,12 @@ export default async function handler(req, res) {
     if (action === 'templates') return handleTemplates(req, res);
     if (action === 'materials') return handleMaterials(req, res);
     if (action === 'usage') return handleUsage(req, res);
+    if (action === 'template-masks') return handleTemplateMasks(req, res);
     if (action === 'generate') return handleGenerate(req, res);
     if (action === 'leads') return handleLeads(req, res);
     if (action === 'budget') return handleBudget(req, res);
+    if (action === 'save-mask') return handleSaveMask(req, res);
+    if (action === 'restore-mask') return handleRestoreMask(req, res);
     if (action === 'legacy-visualize') return handleLegacyVisualize(req, res);
     return res.status(404).json({ error: 'Visualizer route not found.' });
   } catch (error) {
@@ -60,6 +66,11 @@ async function handleUsage(req, res) {
   const sessionId = getQueryValue(req.query?.sessionId);
   if (!sessionId) return res.status(400).json({ error: 'Missing sessionId.' });
   return res.status(200).json(await getUsage(sessionId));
+}
+
+async function handleTemplateMasks(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  return res.status(200).json({ templates: await listTemplateMaskAssets() });
 }
 
 async function handleGenerate(req, res) {
@@ -130,6 +141,32 @@ async function handleBudget(req, res) {
 
   const budget = await saveVisualizerBudget(body);
   return res.status(200).json({ ok: true, budget, usage: await getUsage(sessionId) });
+}
+
+async function handleSaveMask(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const body = await readJsonBody(req);
+  const { templateId, maskType, imageDataUrl } = body || {};
+  if (!templateId || !maskType || !imageDataUrl) {
+    return res.status(400).json({ error: 'Faltan templateId, maskType o imageDataUrl.' });
+  }
+
+  const result = await saveTemplateMaskAsset({ templateId, maskType, imageDataUrl });
+  return res.status(200).json(result);
+}
+
+async function handleRestoreMask(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const body = await readJsonBody(req);
+  const { templateId, maskType } = body || {};
+  if (!templateId || !maskType) {
+    return res.status(400).json({ error: 'Faltan templateId o maskType.' });
+  }
+
+  const result = await restoreTemplateMaskAsset({ templateId, maskType });
+  return res.status(200).json(result);
 }
 
 async function handleLegacyVisualize(req, res) {

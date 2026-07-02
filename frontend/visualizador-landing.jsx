@@ -3,9 +3,199 @@
   const { useEffect, useMemo, useRef, useState } = React;
 
   const fallbackTemplates = [
-    { id: 'wall', label: 'Pared', target: 'wall', imageUrl: '/visualizador-assets/wall-original.png', maskUrl: '/visualizador-assets/wall-mask.png' },
-    { id: 'floor', label: 'Piso', target: 'floor', imageUrl: '/visualizador-assets/floor-original.png', maskUrl: '/visualizador-assets/floor-mask.png' },
-    { id: 'facade', label: 'Fachada', target: 'facade', imageUrl: '/visualizador-assets/facade-original.png', maskUrl: '/visualizador-assets/facade-mask.png' }
+    {
+      id: 'wall',
+      label: 'Pared',
+      target: 'wall',
+      imageUrl: '/visualizador-assets/wall-original.png',
+      maskUrl: '/visualizador-assets/wall-mask.png',
+      surfaceMaskUrl: '/visualizador-assets/wall-mask.png',
+      surfaceMaskMode: 'alpha-cutout',
+      occluderMaskUrl: '/visualizador-assets/wall-occluders.png',
+      occluderMaskMode: 'luma',
+      shadowMaskUrl: '',
+      shadowMaskMode: 'luma',
+      projectionMode: 'wall',
+      occluderShapes: [
+        { kind: 'rect', x: 469, y: 226, width: 142, height: 157, radius: 4, feather: 2 },
+        { kind: 'rect', x: 0, y: 66, width: 102, height: 496, feather: 14 },
+        {
+          kind: 'ellipse',
+          cx: 122,
+          cy: 364,
+          rx: 82,
+          ry: 142,
+          rotation: -8,
+          feather: 10
+        },
+        {
+          kind: 'polygon',
+          points: [
+            [171, 404], [204, 392], [289, 390], [360, 394], [452, 392], [552, 393],
+            [641, 390], [706, 398], [738, 411], [742, 531], [171, 531]
+          ],
+          feather: 10
+        },
+        {
+          kind: 'polygon',
+          points: [
+            [132, 481], [148, 465], [175, 447], [196, 447], [205, 472], [207, 530], [129, 530]
+          ],
+          feather: 8
+        }
+      ],
+      defaults: { scale: 100, rotation: 0, offsetX: 0, offsetY: 0, opacity: 88, lighting: 35 }
+    },
+    {
+      id: 'floor',
+      label: 'Piso',
+      target: 'floor',
+      imageUrl: '/visualizador-assets/floor-original.png',
+      maskUrl: '/visualizador-assets/floor-mask.png',
+      surfaceMaskUrl: '/visualizador-assets/floor-mask.png',
+      surfaceMaskMode: 'alpha-cutout',
+      occluderMaskUrl: '/visualizador-assets/floor-occluders.png',
+      occluderMaskMode: 'luma',
+      shadowMaskUrl: '/visualizador-assets/floor-shadows.png',
+      shadowMaskMode: 'luma',
+      projectionMode: 'floor',
+      occluderShapes: [
+        {
+          kind: 'polygon',
+          points: [
+            [368, 446], [1104, 446], [1273, 645], [150, 645]
+          ],
+          feather: 12
+        },
+        {
+          kind: 'rect',
+          x: 1090,
+          y: 423,
+          width: 360,
+          height: 177,
+          radius: 4,
+          feather: 6
+        },
+        {
+          kind: 'ellipse',
+          cx: 385,
+          cy: 482,
+          rx: 43,
+          ry: 47,
+          rotation: 0,
+          feather: 6
+        },
+        {
+          kind: 'ellipse',
+          cx: 1426,
+          cy: 515,
+          rx: 29,
+          ry: 46,
+          rotation: 0,
+          feather: 6
+        }
+      ],
+      shadowShapes: [
+        {
+          kind: 'polygon',
+          points: [
+            [273, 400], [771, 400], [820, 446], [222, 446]
+          ],
+          feather: 24,
+          alpha: 0.62
+        },
+        {
+          kind: 'polygon',
+          points: [
+            [1020, 425], [1488, 425], [1498, 517], [1070, 534]
+          ],
+          feather: 20,
+          alpha: 0.55
+        },
+        {
+          kind: 'ellipse',
+          cx: 771,
+          cy: 467,
+          rx: 170,
+          ry: 50,
+          rotation: 0,
+          feather: 26,
+          alpha: 0.5
+        }
+      ],
+      defaults: { scale: 120, rotation: 0, offsetX: 0, offsetY: 0, opacity: 92, lighting: 42 }
+    },
+    {
+      id: 'facade',
+      label: 'Fachada',
+      target: 'facade',
+      imageUrl: '/visualizador-assets/facade-original.png',
+      maskUrl: '/visualizador-assets/facade-mask.png',
+      surfaceMaskUrl: '/visualizador-assets/facade-mask.png',
+      surfaceMaskMode: 'alpha-cutout',
+      occluderMaskUrl: '/visualizador-assets/facade-occluders.png',
+      occluderMaskMode: 'luma',
+      shadowMaskUrl: '/visualizador-assets/facade-shadows.png',
+      shadowMaskMode: 'luma',
+      projectionMode: 'facade',
+      occluderShapes: [
+        { kind: 'rect', x: 94, y: 301, width: 297, height: 179, radius: 2, feather: 4 },
+        { kind: 'rect', x: 490, y: 291, width: 95, height: 190, radius: 2, feather: 3 },
+        { kind: 'rect', x: 831, y: 304, width: 41, height: 176, radius: 1, feather: 2 },
+        { kind: 'rect', x: 387, y: 258, width: 268, height: 22, radius: 1, feather: 3 },
+        { kind: 'rect', x: 624, y: 346, width: 12, height: 38, radius: 4, feather: 2 },
+        {
+          kind: 'polygon',
+          points: [
+            [0, 448], [144, 448], [141, 486], [0, 487]
+          ],
+          feather: 8
+        },
+        {
+          kind: 'polygon',
+          points: [
+            [414, 430], [804, 430], [808, 480], [392, 480]
+          ],
+          feather: 10
+        },
+        {
+          kind: 'polygon',
+          points: [
+            [0, 479], [1023, 479], [1023, 684], [0, 684]
+          ],
+          feather: 4
+        }
+      ],
+      shadowShapes: [
+        {
+          kind: 'polygon',
+          points: [
+            [653, 267], [828, 267], [1023, 374], [1023, 471], [620, 471], [620, 311]
+          ],
+          feather: 26,
+          alpha: 0.68
+        },
+        {
+          kind: 'polygon',
+          points: [
+            [387, 280], [654, 280], [622, 324], [421, 324]
+          ],
+          feather: 18,
+          alpha: 0.52
+        },
+        {
+          kind: 'ellipse',
+          cx: 472,
+          cy: 369,
+          rx: 104,
+          ry: 66,
+          rotation: 0,
+          feather: 28,
+          alpha: 0.42
+        }
+      ],
+      defaults: { scale: 95, rotation: 0, offsetX: 0, offsetY: 0, opacity: 90, lighting: 30 }
+    }
   ];
 
   const labels = { wall: 'Pared', floor: 'Piso', facade: 'Fachada' };
@@ -47,6 +237,7 @@
   }
 
   function VisualizadorIAWidget({ apiUrl = '', clientId = 'ca-landing' }) {
+    const maskStorageKey = `ca-viz-mask-edits-${clientId}`;
     const [sessionId] = useState(() => getSessionId(clientId));
     const [templates, setTemplates] = useState(fallbackTemplates);
     const [selectedTemplateId, setSelectedTemplateId] = useState('wall');
@@ -59,14 +250,37 @@
     const [usage, setUsage] = useState({ count: 0, registered: false, limit: 2 });
     const [showLead, setShowLead] = useState(false);
     const [error, setError] = useState('');
+    const [notice, setNotice] = useState('');
     const [budgetSent, setBudgetSent] = useState(false);
+    const [controls, setControls] = useState(() => getTemplateControls(fallbackTemplates[0]));
+    const [previewMode, setPreviewMode] = useState('material');
+    const [maskEditor, setMaskEditor] = useState({ enabled: false, target: 'surface', tool: 'erase', brushSize: 28 });
+    const [maskEdits, setMaskEdits] = useState({});
+    const [maskEditVersion, setMaskEditVersion] = useState(0);
+    const [draftStroke, setDraftStroke] = useState(null);
 
     const selectedTemplate = templates.find((item) => item.id === selectedTemplateId) || templates[0];
     const target = selectedTemplate.target;
     const targetMaterials = useMemo(() => materials.filter((item) => item.target === target), [materials, target]);
     const selectedMaterial = targetMaterials.find((item) => item.id === materialId) || targetMaterials[0];
+    const displayedAfterSrc = previewMode === 'material' && resultUrl ? resultUrl : quickPreviewUrl;
+    const displayedAfterLabel = getAfterLabel(previewMode, resultUrl);
+    const currentMaskEdits = maskEdits[selectedTemplateId] || { surface: [], occluders: [] };
 
     useEffect(() => {
+      try {
+        const saved = window.localStorage.getItem(maskStorageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === 'object') {
+            setMaskEdits(parsed);
+            setMaskEditVersion((value) => value + 1);
+          }
+        }
+      } catch (err) {
+        console.warn('No se pudieron recuperar las mascaras editadas:', err);
+      }
+
       fetch(`${apiUrl}/api/templates`).then((r) => r.json()).then((data) => {
         if (Array.isArray(data.templates) && data.templates.length) setTemplates(data.templates);
       }).catch(() => setTemplates(fallbackTemplates));
@@ -76,11 +290,27 @@
       }).catch(() => setMaterials([]));
 
       refreshUsage();
-    }, [apiUrl, sessionId]);
+    }, [apiUrl, maskStorageKey, sessionId]);
+
+    useEffect(() => {
+      try {
+        window.localStorage.setItem(maskStorageKey, JSON.stringify(maskEdits));
+      } catch (err) {
+        console.warn('No se pudieron guardar las mascaras editadas:', err);
+      }
+    }, [maskEdits, maskStorageKey]);
 
     useEffect(() => {
       if (!selectedMaterial && targetMaterials[0]) setMaterialId(targetMaterials[0].id);
     }, [selectedMaterial, targetMaterials]);
+
+    useEffect(() => {
+      if (!selectedTemplate) return;
+      setControls((current) => {
+        if (current?.templateId === selectedTemplate.id) return current;
+        return getTemplateControls(selectedTemplate);
+      });
+    }, [selectedTemplate?.id]);
 
     useEffect(() => {
       if (!selectedMaterial || !selectedTemplate) {
@@ -91,7 +321,11 @@
 
       let cancelled = false;
       setPreviewLoading(true);
-      buildInstantComposite(selectedTemplate, selectedMaterial).then((url) => {
+      const previewBuilder = previewMode === 'material'
+        ? buildInstantComposite(selectedTemplate, selectedMaterial, controls, currentMaskEdits)
+        : buildGuidePreview(selectedTemplate, previewMode, currentMaskEdits);
+
+      previewBuilder.then((url) => {
         if (cancelled) return;
         setQuickPreviewUrl(url);
         setPreviewLoading(false);
@@ -100,7 +334,26 @@
       return () => {
         cancelled = true;
       };
-    }, [selectedTemplate?.id, selectedTemplate?.maskUrl, selectedMaterial?.id, selectedMaterial?.photo, selectedMaterial?.swatch, selectedMaterial?.color]);
+    }, [
+      selectedTemplate?.id,
+      selectedTemplate?.surfaceMaskUrl,
+      selectedTemplate?.maskUrl,
+      selectedTemplate?.occluderMaskUrl,
+      selectedTemplate?.shadowMaskUrl,
+      selectedTemplate?.projectionMode,
+      selectedMaterial?.id,
+      selectedMaterial?.photo,
+      selectedMaterial?.swatch,
+      selectedMaterial?.color,
+      previewMode,
+      maskEditVersion,
+      controls.scale,
+      controls.rotation,
+      controls.offsetX,
+      controls.offsetY,
+      controls.opacity,
+      controls.lighting
+    ]);
 
     function refreshUsage() {
       fetch(`${apiUrl}/api/usage/${sessionId}`)
@@ -117,8 +370,130 @@
       setMaterialId(nextMaterials[0]?.id || '');
       setResultUrl(null);
       setQuickPreviewUrl(null);
+      setControls(getTemplateControls(next));
+      setPreviewMode('material');
+      setDraftStroke(null);
       setBudgetSent(false);
       setError('');
+      setNotice('');
+    }
+
+    function resetControls() {
+      setControls(getTemplateControls(selectedTemplate));
+    }
+
+    function updateControlsWithClamp(patch) {
+      setControls((prev) => ({
+        ...prev,
+        scale: clamp(patch.scale ?? prev.scale, 50, 220),
+        rotation: clamp(patch.rotation ?? prev.rotation, -45, 45),
+        offsetX: clamp(patch.offsetX ?? prev.offsetX, -180, 180),
+        offsetY: clamp(patch.offsetY ?? prev.offsetY, -180, 180),
+        opacity: clamp(patch.opacity ?? prev.opacity, 55, 100),
+        lighting: clamp(patch.lighting ?? prev.lighting, 0, 100)
+      }));
+    }
+
+    function beginMaskStroke(point) {
+      if (!maskEditor.enabled) return;
+      setDraftStroke({
+        target: maskEditor.target,
+        tool: maskEditor.tool,
+        brush: maskEditor.brushSize / 1000,
+        points: [point]
+      });
+    }
+
+    function updateMaskStroke(point) {
+      if (!maskEditor.enabled) return;
+      setDraftStroke((current) => {
+        if (!current) return current;
+        return { ...current, points: [...current.points, point] };
+      });
+    }
+
+    function commitMaskStroke() {
+      setDraftStroke((current) => {
+        if (!current?.points?.length) return null;
+        setMaskEdits((prev) => {
+          const templateEdits = prev[selectedTemplateId] || { surface: [], occluders: [] };
+          const nextTemplateEdits = {
+            ...templateEdits,
+            [current.target]: [...(templateEdits[current.target] || []), current]
+          };
+          return { ...prev, [selectedTemplateId]: nextTemplateEdits };
+        });
+        setMaskEditVersion((value) => value + 1);
+        return null;
+      });
+    }
+
+    function clearMaskEdits(targetKey = maskEditor.target) {
+      setDraftStroke(null);
+      setMaskEdits((prev) => {
+        const templateEdits = prev[selectedTemplateId] || { surface: [], occluders: [] };
+        const nextTemplateEdits = { ...templateEdits, [targetKey]: [] };
+        return { ...prev, [selectedTemplateId]: nextTemplateEdits };
+      });
+      setMaskEditVersion((value) => value + 1);
+    }
+
+    function clearAllMaskEdits() {
+      setDraftStroke(null);
+      setMaskEdits((prev) => ({
+        ...prev,
+        [selectedTemplateId]: { surface: [], occluders: [] }
+      }));
+      setMaskEditVersion((value) => value + 1);
+    }
+
+    async function exportEditedMask(maskType) {
+      try {
+        const maskData = await buildExportMaskData(selectedTemplate, maskType, currentMaskEdits);
+        if (!maskData) {
+          setError('No se pudo exportar la mascara seleccionada.');
+          return;
+        }
+        downloadImageData(
+          maskData,
+          `${selectedTemplate.id}-${maskType}-${new Date().toISOString().slice(0, 10)}.png`
+        );
+        setError('');
+        setNotice(`Mascara ${maskType === 'surface' ? 'de superficie' : 'de oclusores'} exportada.`);
+      } catch (err) {
+        console.warn('No se pudo exportar la mascara:', err);
+        setError('No se pudo exportar la mascara seleccionada.');
+        setNotice('');
+      }
+    }
+
+    async function saveMaskToProject(maskType) {
+      try {
+        const maskData = await buildExportMaskData(selectedTemplate, maskType, currentMaskEdits);
+        if (!maskData) {
+          setError('No se pudo preparar la mascara para guardar.');
+          setNotice('');
+          return;
+        }
+        const imageDataUrl = imageDataToDataUrl(maskData);
+        const response = await fetch(`${apiUrl}/api/save-mask`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            templateId: selectedTemplate.id,
+            maskType,
+            imageDataUrl
+          })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'No se pudo guardar la mascara en el proyecto.');
+        setError('');
+        setNotice(`Mascara ${maskType === 'surface' ? 'de superficie' : 'de oclusores'} guardada en el proyecto.`);
+      } catch (err) {
+        console.warn('No se pudo guardar la mascara en el proyecto:', err);
+        setError(err.message || 'No se pudo guardar la mascara en el proyecto.');
+        setNotice('');
+      }
     }
 
     async function generate() {
@@ -189,6 +564,173 @@
             </div>
           </div>
 
+          <div className="ca-viz-toolbox">
+            <div className="ca-viz-label">Ajuste fino de textura</div>
+            <div className="ca-viz-viewmodes">
+              {[
+                ['material', 'Material'],
+                ['surface', 'Superficie'],
+                ['occluders', 'Oclusores'],
+                ['shadows', 'Sombras']
+              ].map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={previewMode === mode ? 'active' : ''}
+                  onClick={() => setPreviewMode(mode)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="ca-viz-mask-editor">
+              <div className="ca-viz-mask-editor-row">
+                <button
+                  type="button"
+                  className={maskEditor.enabled ? 'active' : ''}
+                  onClick={() => setMaskEditor((prev) => ({ ...prev, enabled: !prev.enabled }))}
+                >
+                  {maskEditor.enabled ? 'Editor activo' : 'Activar editor'}
+                </button>
+                <button
+                  type="button"
+                  className={maskEditor.target === 'surface' ? 'active' : ''}
+                  onClick={() => setMaskEditor((prev) => ({ ...prev, target: 'surface' }))}
+                >
+                  Superficie
+                </button>
+                <button
+                  type="button"
+                  className={maskEditor.target === 'occluders' ? 'active' : ''}
+                  onClick={() => setMaskEditor((prev) => ({ ...prev, target: 'occluders' }))}
+                >
+                  Oclusores
+                </button>
+              </div>
+              <div className="ca-viz-mask-editor-row">
+                <button
+                  type="button"
+                  className={maskEditor.tool === 'add' ? 'active' : ''}
+                  onClick={() => setMaskEditor((prev) => ({ ...prev, tool: 'add' }))}
+                >
+                  {maskEditor.target === 'surface' ? 'Sumar area' : 'Pintar mascara'}
+                </button>
+                <button
+                  type="button"
+                  className={maskEditor.tool === 'erase' ? 'active' : ''}
+                  onClick={() => setMaskEditor((prev) => ({ ...prev, tool: 'erase' }))}
+                >
+                  {maskEditor.target === 'surface' ? 'Restar area' : 'Borrar mascara'}
+                </button>
+                <button type="button" onClick={() => clearMaskEdits(maskEditor.target)}>
+                  Limpiar {maskEditor.target === 'surface' ? 'superficie' : 'oclusores'}
+                </button>
+                <button type="button" onClick={clearAllMaskEdits}>
+                  Limpiar todo
+                </button>
+              </div>
+              <RangeControl
+                label="Pincel"
+                value={maskEditor.brushSize}
+                min="8"
+                max="72"
+                step="2"
+                suffix="px"
+                onChange={(value) => setMaskEditor((prev) => ({ ...prev, brushSize: value }))}
+              />
+              <div className="ca-viz-mask-editor-row">
+                <button type="button" onClick={() => exportEditedMask('surface')}>
+                  Exportar superficie PNG
+                </button>
+                <button type="button" onClick={() => exportEditedMask('occluders')}>
+                  Exportar oclusores PNG
+                </button>
+                <button type="button" onClick={() => saveMaskToProject('surface')}>
+                  Guardar superficie
+                </button>
+                <button type="button" onClick={() => saveMaskToProject('occluders')}>
+                  Guardar oclusores
+                </button>
+              </div>
+              <span className="ca-viz-tool-note">
+                Trazos guardados en esta escena: {currentMaskEdits.surface.length} superficie, {currentMaskEdits.occluders.length} oclusores
+              </span>
+            </div>
+            <div className="ca-viz-control-grid">
+              <RangeControl
+                label="Escala"
+                value={controls.scale}
+                min="50"
+                max="220"
+                step="5"
+                suffix="%"
+                onChange={(value) => setControls((prev) => ({ ...prev, scale: value }))}
+              />
+              <RangeControl
+                label="Rotación"
+                value={controls.rotation}
+                min="-45"
+                max="45"
+                step="1"
+                suffix="°"
+                onChange={(value) => setControls((prev) => ({ ...prev, rotation: value }))}
+              />
+              <RangeControl
+                label="Desplazamiento X"
+                value={controls.offsetX}
+                min="-180"
+                max="180"
+                step="2"
+                suffix="px"
+                onChange={(value) => setControls((prev) => ({ ...prev, offsetX: value }))}
+              />
+              <RangeControl
+                label="Desplazamiento Y"
+                value={controls.offsetY}
+                min="-180"
+                max="180"
+                step="2"
+                suffix="px"
+                onChange={(value) => setControls((prev) => ({ ...prev, offsetY: value }))}
+              />
+              <RangeControl
+                label="Cobertura del material"
+                value={controls.opacity}
+                min="55"
+                max="100"
+                step="1"
+                suffix="%"
+                onChange={(value) => setControls((prev) => ({ ...prev, opacity: value }))}
+              />
+              <RangeControl
+                label="Respeto de luces y sombras"
+                value={controls.lighting}
+                min="0"
+                max="100"
+                step="1"
+                suffix="%"
+                onChange={(value) => setControls((prev) => ({ ...prev, lighting: value }))}
+              />
+            </div>
+            <div className="ca-viz-tool-actions">
+              <button type="button" className="ca-viz-secondary-btn" onClick={resetControls}>
+                Restablecer ajuste
+              </button>
+              <span className="ca-viz-tool-note">
+                Vista actual: {previewMode === 'material' ? 'resultado compuesto' : guideModeLabel(previewMode)}
+              </span>
+            </div>
+            <div className="ca-viz-hints">
+              <span className={`ca-viz-chip ${(selectedTemplate.occluderMaskUrl || selectedTemplate.occluderShapes?.length) ? 'ready' : ''}`}>
+                Oclusores {(selectedTemplate.occluderMaskUrl || selectedTemplate.occluderShapes?.length) ? 'listos' : 'pendiente'}
+              </span>
+              <span className={`ca-viz-chip ${(selectedTemplate.shadowMaskUrl || selectedTemplate.shadowShapes?.length) ? 'ready' : ''}`}>
+                Sombras {(selectedTemplate.shadowMaskUrl || selectedTemplate.shadowShapes?.length) ? 'listas' : 'auto por luminancia'}
+              </span>
+              <span className="ca-viz-chip">Proyección {projectionLabel(selectedTemplate.projectionMode)}</span>
+            </div>
+          </div>
+
           <button className="ca-viz-generate" disabled={status !== 'idle' || !selectedMaterial} onClick={generate}>
             {status === 'generating' ? 'Generando...' : 'Generar render fotorrealista con IA'}
           </button>
@@ -198,16 +740,26 @@
 
         <CompareSlider
           beforeSrc={selectedTemplate.imageUrl}
-          afterSrc={resultUrl || quickPreviewUrl}
+          afterSrc={displayedAfterSrc}
           beforeLabel="Antes"
-          afterLabel={resultUrl ? 'Después (render IA)' : 'Después (vista previa)'}
+          afterLabel={displayedAfterLabel}
           loadingLabel={previewLoading ? 'Generando vista previa...' : 'Elegí un material'}
+          interactive={previewMode === 'material' && !maskEditor.enabled}
+          controls={controls}
+          onControlsChange={updateControlsWithClamp}
+          onResetControls={resetControls}
+          maskEditor={maskEditor}
+          draftStroke={draftStroke}
+          onMaskStrokeStart={beginMaskStroke}
+          onMaskStrokeMove={updateMaskStroke}
+          onMaskStrokeEnd={commitMaskStroke}
         />
 
         <div className="ca-viz-footer">
           <span>Escena: {selectedTemplate.label}</span>
-          <span>{resultUrl ? 'Mostrando render fotorrealista con IA' : 'Vista previa instantánea del material elegido'}</span>
+          <span>{previewMode === 'material' && resultUrl ? 'Mostrando render fotorrealista con IA' : `Vista actual: ${guideModeLabel(previewMode)}`}</span>
           <span>Generaciones IA: {usage.registered ? 'registrado' : `${usage.count}/${usage.limit}`}</span>
+          {notice && <em>{notice}</em>}
           {error && <strong>{error}</strong>}
         </div>
 
@@ -237,54 +789,114 @@
     return <span className="ca-viz-swatch" style={{ background: material.swatch || '#ccc' }}></span>;
   }
 
-  async function buildInstantComposite(template, material) {
-    if (!template?.imageUrl || !template?.maskUrl) return null;
+  function RangeControl({ label, value, min, max, step, suffix = '', onChange }) {
+    return (
+      <label className="ca-viz-control">
+        <span>{label}</span>
+        <strong>{value}{suffix}</strong>
+        <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+      </label>
+    );
+  }
+
+  async function buildInstantComposite(template, material, controls, maskEditsForTemplate = null) {
+    const surfaceMaskUrl = template?.surfaceMaskUrl || template?.maskUrl;
+    if (!template?.imageUrl || !surfaceMaskUrl) return null;
 
     try {
-      const [baseImg, maskImg] = await Promise.all([loadImage(template.imageUrl), loadImage(template.maskUrl)]);
+      const [baseImg, surfaceMaskImg, occluderMaskImg, shadowMaskImg] = await Promise.all([
+        loadImage(template.imageUrl),
+        loadImage(surfaceMaskUrl),
+        loadOptionalImage(template.occluderMaskUrl),
+        loadOptionalImage(template.shadowMaskUrl)
+      ]);
       const width = baseImg.naturalWidth || baseImg.width;
       const height = baseImg.naturalHeight || baseImg.height;
       if (!width || !height) return null;
 
-      const maskCanvas = document.createElement('canvas');
-      maskCanvas.width = width;
-      maskCanvas.height = height;
-      const maskCtx = maskCanvas.getContext('2d');
-      maskCtx.drawImage(maskImg, 0, 0, width, height);
-      const maskData = maskCtx.getImageData(0, 0, width, height);
+      const baseCanvas = document.createElement('canvas');
+      baseCanvas.width = width;
+      baseCanvas.height = height;
+      const baseCtx = baseCanvas.getContext('2d');
+      baseCtx.drawImage(baseImg, 0, 0, width, height);
+      const baseData = baseCtx.getImageData(0, 0, width, height);
 
-      const layerCanvas = document.createElement('canvas');
-      layerCanvas.width = width;
-      layerCanvas.height = height;
-      const layerCtx = layerCanvas.getContext('2d');
+      let surfaceMaskData = getMaskImageData(surfaceMaskImg, width, height);
+      let occluderMaskData = combineMaskData(width, height, [
+        occluderMaskImg ? getMaskImageData(occluderMaskImg, width, height) : null,
+        template.occluderShapes?.length ? buildShapesMaskData(template.occluderShapes, width, height) : null
+      ]);
+      const shadowMaskData = combineMaskData(width, height, [
+        shadowMaskImg ? getMaskImageData(shadowMaskImg, width, height) : null,
+        template.shadowShapes?.length ? buildShapesMaskData(template.shadowShapes, width, height, true) : null
+      ]);
+      surfaceMaskData = applyMaskEditsToImageData(surfaceMaskData, maskEditsForTemplate?.surface, template.surfaceMaskMode || 'alpha-cutout');
+      occluderMaskData = applyMaskEditsToImageData(occluderMaskData, maskEditsForTemplate?.occluders, template.occluderMaskMode || 'luma');
 
-      if (material?.photo) {
-        const matImg = await loadImage(material.photo);
-        const tileSize = 280;
-        const tileCanvas = document.createElement('canvas');
-        tileCanvas.width = tileSize;
-        tileCanvas.height = tileSize;
-        tileCanvas.getContext('2d').drawImage(matImg, 0, 0, tileSize, tileSize);
-        layerCtx.fillStyle = layerCtx.createPattern(tileCanvas, 'repeat');
-      } else {
-        layerCtx.fillStyle = material?.swatch || material?.color || '#b8b7b0';
+      const tileCanvas = await buildMaterialTile(material, controls, template);
+      const projectedCanvas = document.createElement('canvas');
+      projectedCanvas.width = width;
+      projectedCanvas.height = height;
+      paintProjectedMaterial(projectedCanvas.getContext('2d'), tileCanvas, width, height, controls, template.projectionMode);
+
+      const projectedData = projectedCanvas.getContext('2d').getImageData(0, 0, width, height);
+      const layerPixels = projectedData.data;
+      const basePixels = baseData.data;
+      const surfacePixels = surfaceMaskData.data;
+      const occluderPixels = occluderMaskData?.data;
+      const shadowPixels = shadowMaskData?.data;
+      const globalOpacity = controls.opacity / 100;
+      const lightingStrength = controls.lighting / 100;
+
+      for (let i = 0; i < layerPixels.length; i += 4) {
+        const surfaceAlpha = readMaskCoverage(surfacePixels, i, template.surfaceMaskMode || 'alpha-cutout');
+        if (!surfaceAlpha) {
+          layerPixels[i + 3] = 0;
+          continue;
+        }
+
+        const occluderAlpha = occluderPixels ? readMaskCoverage(occluderPixels, i, template.occluderMaskMode || 'luma') : 0;
+        const availableAlpha = clamp((surfaceAlpha / 255) * (1 - occluderAlpha / 255), 0, 1);
+        if (availableAlpha <= 0) {
+          layerPixels[i + 3] = 0;
+          continue;
+        }
+
+        const lightLuma = getLuma(basePixels[i], basePixels[i + 1], basePixels[i + 2]) / 255;
+        const shadowAlpha = shadowPixels ? readMaskCoverage(shadowPixels, i, template.shadowMaskMode || 'luma') / 255 : 1;
+        const detailFactor = 1 + ((lightLuma - 0.5) * 1.35 * lightingStrength * shadowAlpha);
+        const floorShadowBoost = template.projectionMode === 'floor' ? (1 - shadowAlpha) * 0.18 * lightingStrength : 0;
+
+        layerPixels[i] = clamp(layerPixels[i] * detailFactor * (1 - floorShadowBoost), 0, 255);
+        layerPixels[i + 1] = clamp(layerPixels[i + 1] * detailFactor * (1 - floorShadowBoost), 0, 255);
+        layerPixels[i + 2] = clamp(layerPixels[i + 2] * detailFactor * (1 - floorShadowBoost), 0, 255);
+        layerPixels[i + 3] = Math.round(255 * availableAlpha * globalOpacity);
       }
-      layerCtx.fillRect(0, 0, width, height);
 
-      const layerData = layerCtx.getImageData(0, 0, width, height);
-      const layerPixels = layerData.data;
-      const maskPixels = maskData.data;
-      for (let i = 3; i < layerPixels.length; i += 4) {
-        layerPixels[i] = 255 - maskPixels[i];
-      }
-      layerCtx.putImageData(layerData, 0, 0);
+      projectedCanvas.getContext('2d').putImageData(projectedData, 0, 0);
 
       const outCanvas = document.createElement('canvas');
       outCanvas.width = width;
       outCanvas.height = height;
       const outCtx = outCanvas.getContext('2d');
       outCtx.drawImage(baseImg, 0, 0, width, height);
-      outCtx.drawImage(layerCanvas, 0, 0);
+      outCtx.drawImage(projectedCanvas, 0, 0);
+
+      if (occluderMaskData) {
+        const occluderCanvas = document.createElement('canvas');
+        occluderCanvas.width = width;
+        occluderCanvas.height = height;
+        const occluderCtx = occluderCanvas.getContext('2d');
+        occluderCtx.putImageData(baseData, 0, 0);
+
+        const isolatedOccluders = occluderCtx.getImageData(0, 0, width, height);
+        const isolatedPixels = isolatedOccluders.data;
+        for (let i = 0; i < isolatedPixels.length; i += 4) {
+          isolatedPixels[i + 3] = readMaskCoverage(occluderPixels, i, template.occluderMaskMode || 'luma');
+        }
+        occluderCtx.putImageData(isolatedOccluders, 0, 0);
+        outCtx.drawImage(occluderCanvas, 0, 0);
+      }
 
       return outCanvas.toDataURL('image/png');
     } catch (err) {
@@ -293,12 +905,140 @@
     }
   }
 
-  function CompareSlider({ beforeSrc, afterSrc, beforeLabel = 'Antes', afterLabel = 'Después', loadingLabel = '' }) {
+  function CompareSlider({
+    beforeSrc,
+    afterSrc,
+    beforeLabel = 'Antes',
+    afterLabel = 'Después',
+    loadingLabel = '',
+    interactive = false,
+    controls = null,
+    onControlsChange = null,
+    onResetControls = null,
+    maskEditor = null,
+    draftStroke = null,
+    onMaskStrokeStart = null,
+    onMaskStrokeMove = null,
+    onMaskStrokeEnd = null
+  }) {
     const [percent, setPercent] = useState(50);
+    const frameRef = useRef(null);
+    const dragStateRef = useRef(null);
+    const paintStateRef = useRef(null);
+
+    function normalizePoint(event) {
+      const rect = frameRef.current?.getBoundingClientRect();
+      if (!rect) return null;
+      return {
+        x: clamp((event.clientX - rect.left) / rect.width, 0, 1),
+        y: clamp((event.clientY - rect.top) / rect.height, 0, 1)
+      };
+    }
+
+    function handlePointerDown(event) {
+      if (event.button !== 0) return;
+      if (maskEditor?.enabled && (onMaskStrokeStart || onMaskStrokeMove)) {
+        const point = normalizePoint(event);
+        if (!point) return;
+        paintStateRef.current = true;
+        onMaskStrokeStart?.(point);
+        frameRef.current?.setPointerCapture?.(event.pointerId);
+        return;
+      }
+      if (!interactive || !onControlsChange || !controls) return;
+      dragStateRef.current = {
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX: controls.offsetX,
+        offsetY: controls.offsetY
+      };
+      frameRef.current?.setPointerCapture?.(event.pointerId);
+    }
+
+    function handlePointerMove(event) {
+      if (paintStateRef.current && maskEditor?.enabled) {
+        const point = normalizePoint(event);
+        if (point) onMaskStrokeMove?.(point);
+        return;
+      }
+      if (!interactive || !onControlsChange || !dragStateRef.current) return;
+      const drag = dragStateRef.current;
+      const dx = event.clientX - drag.startX;
+      const dy = event.clientY - drag.startY;
+      onControlsChange({
+        offsetX: drag.offsetX + dx,
+        offsetY: drag.offsetY + dy
+      });
+    }
+
+    function handlePointerEnd(event) {
+      if (paintStateRef.current) {
+        paintStateRef.current = null;
+        onMaskStrokeEnd?.();
+      }
+      dragStateRef.current = null;
+      frameRef.current?.releasePointerCapture?.(event.pointerId);
+    }
+
+    function handleWheel(event) {
+      if (!interactive || !onControlsChange || !controls) return;
+      event.preventDefault();
+      const delta = event.deltaY < 0 ? 6 : -6;
+      onControlsChange({ scale: controls.scale + delta });
+    }
+
+    function handleKeyDown(event) {
+      if (maskEditor?.enabled) {
+        if (event.key.toLowerCase() === 'e') {
+          event.preventDefault();
+          return;
+        }
+      }
+      if (!interactive || !onControlsChange || !controls) return;
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        onControlsChange({ offsetX: controls.offsetX - 8 });
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        onControlsChange({ offsetX: controls.offsetX + 8 });
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        onControlsChange({ offsetY: controls.offsetY - 8 });
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        onControlsChange({ offsetY: controls.offsetY + 8 });
+      } else if (event.key === '+' || event.key === '=') {
+        event.preventDefault();
+        onControlsChange({ scale: controls.scale + 6 });
+      } else if (event.key === '-') {
+        event.preventDefault();
+        onControlsChange({ scale: controls.scale - 6 });
+      } else if (event.key === '[') {
+        event.preventDefault();
+        onControlsChange({ rotation: controls.rotation - 2 });
+      } else if (event.key === ']') {
+        event.preventDefault();
+        onControlsChange({ rotation: controls.rotation + 2 });
+      } else if (event.key === '0' && onResetControls) {
+        event.preventDefault();
+        onResetControls();
+      }
+    }
 
     return (
       <div className="ca-compare">
-        <div className="ca-compare-frame">
+        <div
+          ref={frameRef}
+          className={`ca-compare-frame ${interactive ? 'is-interactive' : ''} ${maskEditor?.enabled ? 'is-editing-mask' : ''}`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
+          onPointerLeave={handlePointerEnd}
+          onWheel={handleWheel}
+          onKeyDown={handleKeyDown}
+          tabIndex={interactive || maskEditor?.enabled ? 0 : -1}
+        >
           {afterSrc ? (
             <img className="ca-compare-img ca-compare-after" src={afterSrc} alt={afterLabel} />
           ) : (
@@ -315,6 +1055,43 @@
           <div className="ca-compare-line" style={{ left: `${percent}%` }} />
           <span className="ca-compare-tag ca-compare-tag-before">{beforeLabel}</span>
           <span className="ca-compare-tag ca-compare-tag-after">{afterLabel}</span>
+          {interactive && controls && (
+            <div className="ca-compare-hud">
+              <strong>Edicion directa</strong>
+              <span>Arrastrar: mover textura</span>
+              <span>Rueda: zoom</span>
+              <span>Flechas: desplazar</span>
+              <span>`[` `]`: rotar</span>
+              <span>`0`: resetear</span>
+              <div className="ca-compare-stats">
+                <b>Esc {Math.round(controls.scale)}%</b>
+                <b>Rot {Math.round(controls.rotation)}°</b>
+                <b>X {Math.round(controls.offsetX)}</b>
+                <b>Y {Math.round(controls.offsetY)}</b>
+              </div>
+            </div>
+          )}
+          {maskEditor?.enabled && (
+            <div className="ca-compare-hud ca-compare-hud-editor">
+              <strong>Editor de mascara</strong>
+              <span>{maskEditor.target === 'surface' ? 'Editando superficie' : 'Editando oclusores'}</span>
+              <span>{maskEditor.tool === 'add' ? 'Modo pintar' : 'Modo borrar'}</span>
+              <span>Pincel {maskEditor.brushSize}px</span>
+            </div>
+          )}
+          {maskEditor?.enabled && draftStroke?.points?.length > 0 && (
+            <svg className="ca-compare-overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+              <polyline
+                fill="none"
+                stroke={maskEditor.target === 'surface' ? '#4cc9ff' : '#ff7b7b'}
+                strokeOpacity="0.95"
+                strokeWidth={Math.max(8, maskEditor.brushSize)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                points={draftStroke.points.map((point) => `${point.x * 1000},${point.y * 1000}`).join(' ')}
+              />
+            </svg>
+          )}
         </div>
         <input
           type="range"
@@ -458,6 +1235,457 @@
       img.crossOrigin = 'anonymous';
       img.src = src;
     });
+  }
+
+  function loadOptionalImage(src) {
+    if (!src) return Promise.resolve(null);
+    return loadImage(src).catch(() => null);
+  }
+
+  function getTemplateControls(template) {
+    const defaults = template?.defaults || {};
+    return {
+      templateId: template?.id || '',
+      scale: defaults.scale ?? 100,
+      rotation: defaults.rotation ?? 0,
+      offsetX: defaults.offsetX ?? 0,
+      offsetY: defaults.offsetY ?? 0,
+      opacity: defaults.opacity ?? 90,
+      lighting: defaults.lighting ?? 35
+    };
+  }
+
+  function getMaskImageData(image, width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0, width, height);
+    return ctx.getImageData(0, 0, width, height);
+  }
+
+  function buildShapesMaskData(shapes, width, height, useAlphaAsCoverage = false) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, width, height);
+
+    shapes.forEach((shape) => {
+      const feather = Number(shape.feather || 0);
+      ctx.save();
+
+      if (feather > 0) {
+        ctx.filter = `blur(${feather}px)`;
+      }
+
+      const alpha = clamp(shape.alpha ?? 1, 0, 1);
+      ctx.fillStyle = useAlphaAsCoverage ? `rgba(255,255,255,${alpha})` : '#ffffff';
+      if (shape.kind === 'rect') {
+        fillRoundedRect(ctx, shape.x, shape.y, shape.width, shape.height, shape.radius || 0);
+      } else if (shape.kind === 'polygon' && Array.isArray(shape.points) && shape.points.length >= 3) {
+        ctx.beginPath();
+        ctx.moveTo(shape.points[0][0], shape.points[0][1]);
+        for (let i = 1; i < shape.points.length; i += 1) {
+          ctx.lineTo(shape.points[i][0], shape.points[i][1]);
+        }
+        ctx.closePath();
+        ctx.fill();
+      } else if (shape.kind === 'ellipse') {
+        ctx.beginPath();
+        ctx.ellipse(shape.cx, shape.cy, shape.rx, shape.ry, ((shape.rotation || 0) * Math.PI) / 180, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    });
+
+    return ctx.getImageData(0, 0, width, height);
+  }
+
+  function combineMaskData(width, height, masks) {
+    const validMasks = masks.filter(Boolean);
+    if (!validMasks.length) return null;
+    if (validMasks.length === 1) return validMasks[0];
+
+    const merged = new ImageData(width, height);
+    for (let i = 0; i < merged.data.length; i += 4) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      for (const mask of validMasks) {
+        r = Math.max(r, mask.data[i]);
+        g = Math.max(g, mask.data[i + 1]);
+        b = Math.max(b, mask.data[i + 2]);
+        a = Math.max(a, mask.data[i + 3]);
+      }
+      merged.data[i] = r;
+      merged.data[i + 1] = g;
+      merged.data[i + 2] = b;
+      merged.data[i + 3] = a;
+    }
+    return merged;
+  }
+
+  async function buildExportMaskData(template, maskType, maskEditsForTemplate = null) {
+    const surfaceMaskUrl = template?.surfaceMaskUrl || template?.maskUrl;
+    if (!template?.imageUrl || !surfaceMaskUrl) return null;
+
+    const [baseImg, surfaceMaskImg, occluderMaskImg] = await Promise.all([
+      loadImage(template.imageUrl),
+      loadImage(surfaceMaskUrl),
+      loadOptionalImage(template.occluderMaskUrl)
+    ]);
+
+    const width = baseImg.naturalWidth || baseImg.width;
+    const height = baseImg.naturalHeight || baseImg.height;
+    if (!width || !height) return null;
+
+    if (maskType === 'surface') {
+      const surfaceMaskData = applyMaskEditsToImageData(
+        getMaskImageData(surfaceMaskImg, width, height),
+        maskEditsForTemplate?.surface,
+        template.surfaceMaskMode || 'alpha-cutout'
+      );
+      return normalizeMaskForExport(surfaceMaskData, template.surfaceMaskMode || 'alpha-cutout');
+    }
+
+    const occluderMaskData = applyMaskEditsToImageData(
+      combineMaskData(width, height, [
+        occluderMaskImg ? getMaskImageData(occluderMaskImg, width, height) : null,
+        template.occluderShapes?.length ? buildShapesMaskData(template.occluderShapes, width, height) : null
+      ]),
+      maskEditsForTemplate?.occluders,
+      template.occluderMaskMode || 'luma'
+    );
+    return normalizeMaskForExport(occluderMaskData, template.occluderMaskMode || 'luma');
+  }
+
+  function applyMaskEditsToImageData(maskData, strokes, maskMode = 'luma') {
+    if (!strokes?.length && maskData) return maskData;
+    if (!strokes?.length) return maskData;
+
+    const width = maskData?.width || 1024;
+    const height = maskData?.height || 1024;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    if (maskData) {
+      ctx.putImageData(cloneImageData(maskData), 0, 0);
+    } else {
+      ctx.clearRect(0, 0, width, height);
+    }
+
+    strokes.forEach((stroke) => {
+      if (!stroke?.points?.length) return;
+      const lineWidth = Math.max(4, (stroke.brush || 0.02) * Math.min(width, height));
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = lineWidth;
+
+      if (maskMode === 'alpha-cutout') {
+        if (stroke.tool === 'add') {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.strokeStyle = 'rgba(0,0,0,1)';
+          ctx.fillStyle = 'rgba(0,0,0,1)';
+        } else {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = 'rgba(0,0,0,1)';
+          ctx.fillStyle = 'rgba(0,0,0,1)';
+        }
+      } else {
+        if (stroke.tool === 'add') {
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.strokeStyle = 'rgba(255,255,255,1)';
+          ctx.fillStyle = 'rgba(255,255,255,1)';
+        } else {
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.strokeStyle = 'rgba(0,0,0,1)';
+          ctx.fillStyle = 'rgba(0,0,0,1)';
+        }
+      }
+
+      if (stroke.points.length === 1) {
+        const point = stroke.points[0];
+        ctx.beginPath();
+        ctx.arc(point.x * width, point.y * height, lineWidth / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(stroke.points[0].x * width, stroke.points[0].y * height);
+        for (let i = 1; i < stroke.points.length; i += 1) {
+          ctx.lineTo(stroke.points[i].x * width, stroke.points[i].y * height);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    });
+
+    return ctx.getImageData(0, 0, width, height);
+  }
+
+  function cloneImageData(imageData) {
+    return new ImageData(new Uint8ClampedArray(imageData.data), imageData.width, imageData.height);
+  }
+
+  function normalizeMaskForExport(maskData, maskMode = 'luma') {
+    if (!maskData) return null;
+    const out = new ImageData(maskData.width, maskData.height);
+    for (let i = 0; i < out.data.length; i += 4) {
+      const coverage = readMaskCoverage(maskData.data, i, maskMode);
+      out.data[i] = coverage;
+      out.data[i + 1] = coverage;
+      out.data[i + 2] = coverage;
+      out.data[i + 3] = 255;
+    }
+    return out;
+  }
+
+  function downloadImageData(imageData, fileName) {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
+    const link = document.createElement('a');
+    link.href = canvas.toDataURL('image/png');
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  function imageDataToDataUrl(imageData) {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
+  async function buildGuidePreview(template, mode, maskEditsForTemplate = null) {
+    const surfaceMaskUrl = template?.surfaceMaskUrl || template?.maskUrl;
+    if (!template?.imageUrl || !surfaceMaskUrl) return null;
+
+    try {
+      const [baseImg, surfaceMaskImg, occluderMaskImg, shadowMaskImg] = await Promise.all([
+        loadImage(template.imageUrl),
+        loadImage(surfaceMaskUrl),
+        loadOptionalImage(template.occluderMaskUrl),
+        loadOptionalImage(template.shadowMaskUrl)
+      ]);
+      const width = baseImg.naturalWidth || baseImg.width;
+      const height = baseImg.naturalHeight || baseImg.height;
+      if (!width || !height) return null;
+
+      let surfaceMaskData = getMaskImageData(surfaceMaskImg, width, height);
+      let occluderMaskData = combineMaskData(width, height, [
+        occluderMaskImg ? getMaskImageData(occluderMaskImg, width, height) : null,
+        template.occluderShapes?.length ? buildShapesMaskData(template.occluderShapes, width, height) : null
+      ]);
+      const shadowMaskData = combineMaskData(width, height, [
+        shadowMaskImg ? getMaskImageData(shadowMaskImg, width, height) : null,
+        template.shadowShapes?.length ? buildShapesMaskData(template.shadowShapes, width, height, true) : null
+      ]);
+      surfaceMaskData = applyMaskEditsToImageData(surfaceMaskData, maskEditsForTemplate?.surface, template.surfaceMaskMode || 'alpha-cutout');
+      occluderMaskData = applyMaskEditsToImageData(occluderMaskData, maskEditsForTemplate?.occluders, template.occluderMaskMode || 'luma');
+
+      const selectedMaskData = mode === 'surface'
+        ? surfaceMaskData
+        : (mode === 'occluders' ? occluderMaskData : shadowMaskData);
+
+      if (!selectedMaskData) return template.imageUrl;
+
+      const overlayStyles = {
+        surface: { color: [50, 184, 255], opacity: 0.42, maskMode: template.surfaceMaskMode || 'alpha-cutout' },
+        occluders: { color: [255, 90, 90], opacity: 0.58, maskMode: template.occluderMaskMode || 'luma' },
+        shadows: { color: [140, 102, 255], opacity: 0.52, maskMode: template.shadowMaskMode || 'luma' }
+      };
+      const overlayStyle = overlayStyles[mode] || overlayStyles.surface;
+
+      const outCanvas = document.createElement('canvas');
+      outCanvas.width = width;
+      outCanvas.height = height;
+      const outCtx = outCanvas.getContext('2d');
+      outCtx.drawImage(baseImg, 0, 0, width, height);
+
+      const overlay = outCtx.createImageData(width, height);
+      const pixels = selectedMaskData.data;
+      for (let i = 0; i < overlay.data.length; i += 4) {
+        const coverage = readMaskCoverage(pixels, i, overlayStyle.maskMode) / 255;
+        overlay.data[i] = overlayStyle.color[0];
+        overlay.data[i + 1] = overlayStyle.color[1];
+        overlay.data[i + 2] = overlayStyle.color[2];
+        overlay.data[i + 3] = Math.round(255 * coverage * overlayStyle.opacity);
+      }
+
+      const overlayCanvas = document.createElement('canvas');
+      overlayCanvas.width = width;
+      overlayCanvas.height = height;
+      overlayCanvas.getContext('2d').putImageData(overlay, 0, 0);
+      outCtx.drawImage(overlayCanvas, 0, 0);
+
+      return outCanvas.toDataURL('image/png');
+    } catch (err) {
+      console.warn('No se pudo generar la vista guía:', err);
+      return template.imageUrl;
+    }
+  }
+
+  function fillRoundedRect(ctx, x, y, width, height, radius) {
+    const r = Math.max(0, Math.min(radius, Math.min(width, height) / 2));
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  async function buildMaterialTile(material, controls, template) {
+    const tileSize = Math.max(160, Math.round(280 * (controls.scale / 100)));
+    const tileCanvas = document.createElement('canvas');
+    tileCanvas.width = tileSize;
+    tileCanvas.height = tileSize;
+    const ctx = tileCanvas.getContext('2d');
+
+    if (material?.photo) {
+      const matImg = await loadImage(material.photo);
+      ctx.drawImage(matImg, 0, 0, tileSize, tileSize);
+    } else {
+      drawProceduralTile(ctx, tileSize, material, template);
+    }
+
+    return tileCanvas;
+  }
+
+  function drawProceduralTile(ctx, tileSize, material, template) {
+    const baseColor = material?.swatch || material?.color || '#b8b7b0';
+    const seed = String(material?.id || material?.label || baseColor).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, tileSize, tileSize);
+
+    for (let i = 0; i < 42; i++) {
+      const x = seeded(seed + i * 17) * tileSize;
+      const y = seeded(seed + i * 31) * tileSize;
+      const r = seeded(seed + i * 47) * (template?.projectionMode === 'floor' ? 24 : 18) + 6;
+      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (template?.projectionMode === 'floor') {
+      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+      ctx.lineWidth = 2;
+      for (let y = 0; y < tileSize; y += Math.max(28, Math.round(tileSize / 8))) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(tileSize, y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  function paintProjectedMaterial(ctx, tileCanvas, width, height, controls, projectionMode = 'wall') {
+    ctx.clearRect(0, 0, width, height);
+
+    if (projectionMode === 'floor') {
+      drawFloorProjection(ctx, tileCanvas, width, height, controls);
+      return;
+    }
+
+    drawFlatProjection(ctx, tileCanvas, width, height, controls, projectionMode === 'facade' ? 0.04 : 0);
+  }
+
+  function drawFlatProjection(ctx, tileCanvas, width, height, controls, verticalBreath = 0) {
+    const radians = (controls.rotation * Math.PI) / 180;
+    const stepX = tileCanvas.width;
+    const stepY = tileCanvas.height;
+    const span = Math.max(width, height) * 2;
+
+    ctx.save();
+    ctx.translate(width / 2 + controls.offsetX, height / 2 + controls.offsetY);
+    ctx.rotate(radians);
+
+    for (let x = -span; x < span; x += stepX) {
+      for (let y = -span; y < span; y += stepY) {
+        const wave = verticalBreath ? Math.sin((y / stepY) * Math.PI * 0.5) * verticalBreath * stepY : 0;
+        ctx.drawImage(tileCanvas, x + wave, y, stepX, stepY);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  function drawFloorProjection(ctx, tileCanvas, width, height, controls) {
+    const patternCanvas = document.createElement('canvas');
+    patternCanvas.width = width * 2;
+    patternCanvas.height = height * 2;
+    const patternCtx = patternCanvas.getContext('2d');
+    drawFlatProjection(patternCtx, tileCanvas, patternCanvas.width, patternCanvas.height, controls);
+
+    const sourceCenterX = patternCanvas.width / 2;
+    const maxSourceWidth = patternCanvas.width * 0.88;
+    const horizon = height * 0.1;
+    const visibleHeight = height - horizon;
+
+    for (let y = 0; y < visibleHeight; y += 3) {
+      const t = y / visibleHeight;
+      const perspective = Math.pow(t, 1.55);
+      const sourceWidth = Math.max(tileCanvas.width * 0.55, maxSourceWidth * (0.14 + perspective * 0.86));
+      const srcX = clamp(sourceCenterX - sourceWidth / 2 + controls.offsetX * 0.5, 0, patternCanvas.width - sourceWidth);
+      const srcY = clamp(y * (0.55 + perspective * 0.45) + controls.offsetY, 0, patternCanvas.height - 3);
+      const destY = horizon + y;
+      ctx.drawImage(patternCanvas, srcX, srcY, sourceWidth, 3, 0, destY, width, 3);
+    }
+  }
+
+  function readMaskCoverage(pixels, index, mode = 'alpha-cutout') {
+    const alpha = pixels[index + 3];
+    const luma = getLuma(pixels[index], pixels[index + 1], pixels[index + 2]);
+
+    if (mode === 'alpha') return alpha;
+    if (mode === 'luma') return Math.round((luma * alpha) / 255);
+    if (mode === 'luma-invert') return 255 - Math.round((luma * alpha) / 255);
+    return 255 - alpha;
+  }
+
+  function getLuma(r, g, b) {
+    return (r * 0.299) + (g * 0.587) + (b * 0.114);
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function projectionLabel(mode) {
+    if (mode === 'floor') return 'suelo';
+    if (mode === 'facade') return 'fachada';
+    return 'muro';
+  }
+
+  function guideModeLabel(mode) {
+    if (mode === 'surface') return 'superficie a intervenir';
+    if (mode === 'occluders') return 'oclusores protegidos';
+    if (mode === 'shadows') return 'sombras y volumen';
+    return 'resultado compuesto';
+  }
+
+  function getAfterLabel(mode, hasResult) {
+    if (mode === 'surface') return 'Guía de superficie';
+    if (mode === 'occluders') return 'Guía de oclusores';
+    if (mode === 'shadows') return 'Guía de sombras';
+    return hasResult ? 'Después (render IA)' : 'Después (vista previa)';
   }
 
   function getSessionId(clientId) {

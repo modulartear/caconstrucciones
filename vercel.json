@@ -16,6 +16,10 @@
       "dest": "/api/visualizador?action=usage&sessionId=$1"
     },
     {
+      "src": "/api/template-masks",
+      "dest": "/api/visualizador?action=template-masks"
+    },
+    {
       "src": "/api/generate",
       "dest": "/api/visualizador?action=generate"
     },
@@ -26,6 +30,14 @@
     {
       "src": "/api/visualizador-budget",
       "dest": "/api/visualizador?action=budget"
+    },
+    {
+      "src": "/api/save-mask",
+      "dest": "/api/visualizador?action=save-mask"
+    },
+    {
+      "src": "/api/restore-mask",
+      "dest": "/api/visualizador?action=restore-mask"
     },
     {
       "src": "/api/visualize",
