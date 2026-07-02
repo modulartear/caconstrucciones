@@ -263,8 +263,8 @@
     const target = selectedTemplate.target;
     const targetMaterials = useMemo(() => materials.filter((item) => item.target === target), [materials, target]);
     const selectedMaterial = targetMaterials.find((item) => item.id === materialId) || targetMaterials[0];
-    const displayedAfterSrc = previewMode === 'material' && resultUrl ? resultUrl : quickPreviewUrl;
-    const displayedAfterLabel = getAfterLabel(previewMode, resultUrl);
+    const displayedAfterSrc = quickPreviewUrl;
+    const displayedAfterLabel = getAfterLabel(previewMode);
     const currentMaskEdits = maskEdits[selectedTemplateId] || { surface: [], occluders: [] };
 
     useEffect(() => {
@@ -564,176 +564,6 @@
             </div>
           </div>
 
-          <div className="ca-viz-toolbox">
-            <div className="ca-viz-label">Ajuste fino de textura</div>
-            <div className="ca-viz-viewmodes">
-              {[
-                ['material', 'Material'],
-                ['surface', 'Superficie'],
-                ['occluders', 'Oclusores'],
-                ['shadows', 'Sombras']
-              ].map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  className={previewMode === mode ? 'active' : ''}
-                  onClick={() => setPreviewMode(mode)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <div className="ca-viz-mask-editor">
-              <div className="ca-viz-mask-editor-row">
-                <button
-                  type="button"
-                  className={maskEditor.enabled ? 'active' : ''}
-                  onClick={() => setMaskEditor((prev) => ({ ...prev, enabled: !prev.enabled }))}
-                >
-                  {maskEditor.enabled ? 'Editor activo' : 'Activar editor'}
-                </button>
-                <button
-                  type="button"
-                  className={maskEditor.target === 'surface' ? 'active' : ''}
-                  onClick={() => setMaskEditor((prev) => ({ ...prev, target: 'surface' }))}
-                >
-                  Superficie
-                </button>
-                <button
-                  type="button"
-                  className={maskEditor.target === 'occluders' ? 'active' : ''}
-                  onClick={() => setMaskEditor((prev) => ({ ...prev, target: 'occluders' }))}
-                >
-                  Oclusores
-                </button>
-              </div>
-              <div className="ca-viz-mask-editor-row">
-                <button
-                  type="button"
-                  className={maskEditor.tool === 'add' ? 'active' : ''}
-                  onClick={() => setMaskEditor((prev) => ({ ...prev, tool: 'add' }))}
-                >
-                  {maskEditor.target === 'surface' ? 'Sumar area' : 'Pintar mascara'}
-                </button>
-                <button
-                  type="button"
-                  className={maskEditor.tool === 'erase' ? 'active' : ''}
-                  onClick={() => setMaskEditor((prev) => ({ ...prev, tool: 'erase' }))}
-                >
-                  {maskEditor.target === 'surface' ? 'Restar area' : 'Borrar mascara'}
-                </button>
-                <button type="button" onClick={() => clearMaskEdits(maskEditor.target)}>
-                  Limpiar {maskEditor.target === 'surface' ? 'superficie' : 'oclusores'}
-                </button>
-                <button type="button" onClick={clearAllMaskEdits}>
-                  Limpiar todo
-                </button>
-              </div>
-              <RangeControl
-                label="Pincel"
-                value={maskEditor.brushSize}
-                min="8"
-                max="72"
-                step="2"
-                suffix="px"
-                onChange={(value) => setMaskEditor((prev) => ({ ...prev, brushSize: value }))}
-              />
-              <div className="ca-viz-mask-editor-row">
-                <button type="button" onClick={() => exportEditedMask('surface')}>
-                  Exportar superficie PNG
-                </button>
-                <button type="button" onClick={() => exportEditedMask('occluders')}>
-                  Exportar oclusores PNG
-                </button>
-                <button type="button" onClick={() => saveMaskToProject('surface')}>
-                  Guardar superficie
-                </button>
-                <button type="button" onClick={() => saveMaskToProject('occluders')}>
-                  Guardar oclusores
-                </button>
-              </div>
-              <span className="ca-viz-tool-note">
-                Trazos guardados en esta escena: {currentMaskEdits.surface.length} superficie, {currentMaskEdits.occluders.length} oclusores
-              </span>
-            </div>
-            <div className="ca-viz-control-grid">
-              <RangeControl
-                label="Escala"
-                value={controls.scale}
-                min="50"
-                max="220"
-                step="5"
-                suffix="%"
-                onChange={(value) => setControls((prev) => ({ ...prev, scale: value }))}
-              />
-              <RangeControl
-                label="Rotación"
-                value={controls.rotation}
-                min="-45"
-                max="45"
-                step="1"
-                suffix="°"
-                onChange={(value) => setControls((prev) => ({ ...prev, rotation: value }))}
-              />
-              <RangeControl
-                label="Desplazamiento X"
-                value={controls.offsetX}
-                min="-180"
-                max="180"
-                step="2"
-                suffix="px"
-                onChange={(value) => setControls((prev) => ({ ...prev, offsetX: value }))}
-              />
-              <RangeControl
-                label="Desplazamiento Y"
-                value={controls.offsetY}
-                min="-180"
-                max="180"
-                step="2"
-                suffix="px"
-                onChange={(value) => setControls((prev) => ({ ...prev, offsetY: value }))}
-              />
-              <RangeControl
-                label="Cobertura del material"
-                value={controls.opacity}
-                min="55"
-                max="100"
-                step="1"
-                suffix="%"
-                onChange={(value) => setControls((prev) => ({ ...prev, opacity: value }))}
-              />
-              <RangeControl
-                label="Respeto de luces y sombras"
-                value={controls.lighting}
-                min="0"
-                max="100"
-                step="1"
-                suffix="%"
-                onChange={(value) => setControls((prev) => ({ ...prev, lighting: value }))}
-              />
-            </div>
-            <div className="ca-viz-tool-actions">
-              <button type="button" className="ca-viz-secondary-btn" onClick={resetControls}>
-                Restablecer ajuste
-              </button>
-              <span className="ca-viz-tool-note">
-                Vista actual: {previewMode === 'material' ? 'resultado compuesto' : guideModeLabel(previewMode)}
-              </span>
-            </div>
-            <div className="ca-viz-hints">
-              <span className={`ca-viz-chip ${(selectedTemplate.occluderMaskUrl || selectedTemplate.occluderShapes?.length) ? 'ready' : ''}`}>
-                Oclusores {(selectedTemplate.occluderMaskUrl || selectedTemplate.occluderShapes?.length) ? 'listos' : 'pendiente'}
-              </span>
-              <span className={`ca-viz-chip ${(selectedTemplate.shadowMaskUrl || selectedTemplate.shadowShapes?.length) ? 'ready' : ''}`}>
-                Sombras {(selectedTemplate.shadowMaskUrl || selectedTemplate.shadowShapes?.length) ? 'listas' : 'auto por luminancia'}
-              </span>
-              <span className="ca-viz-chip">Proyección {projectionLabel(selectedTemplate.projectionMode)}</span>
-            </div>
-          </div>
-
-          <button className="ca-viz-generate" disabled={status !== 'idle' || !selectedMaterial} onClick={generate}>
-            {status === 'generating' ? 'Generando...' : 'Generar render fotorrealista con IA'}
-          </button>
         </div>
 
         {showLead && <LeadForm apiUrl={apiUrl} clientId={clientId} sessionId={sessionId} setUsage={setUsage} setShowLead={setShowLead} setError={setError} />}
@@ -744,40 +574,13 @@
           beforeLabel="Antes"
           afterLabel={displayedAfterLabel}
           loadingLabel={previewLoading ? 'Generando vista previa...' : 'Elegí un material'}
-          interactive={previewMode === 'material' && !maskEditor.enabled}
-          controls={controls}
-          onControlsChange={updateControlsWithClamp}
-          onResetControls={resetControls}
-          maskEditor={maskEditor}
-          draftStroke={draftStroke}
-          onMaskStrokeStart={beginMaskStroke}
-          onMaskStrokeMove={updateMaskStroke}
-          onMaskStrokeEnd={commitMaskStroke}
         />
 
         <div className="ca-viz-footer">
           <span>Escena: {selectedTemplate.label}</span>
-          <span>{previewMode === 'material' && resultUrl ? 'Mostrando render fotorrealista con IA' : `Vista actual: ${guideModeLabel(previewMode)}`}</span>
-          <span>Generaciones IA: {usage.registered ? 'registrado' : `${usage.count}/${usage.limit}`}</span>
-          {notice && <em>{notice}</em>}
+          <span>Elegí un material y deslizá para comparar el antes y el después.</span>
           {error && <strong>{error}</strong>}
         </div>
-
-        {resultUrl && (
-          <BudgetForm
-            apiUrl={apiUrl}
-            clientId={clientId}
-            sessionId={sessionId}
-            selectedTemplate={selectedTemplate}
-            selectedMaterial={selectedMaterial}
-            target={target}
-            resultUrl={resultUrl}
-            setUsage={setUsage}
-            setError={setError}
-            budgetSent={budgetSent}
-            setBudgetSent={setBudgetSent}
-          />
-        )}
       </div>
     );
   }
@@ -1681,11 +1484,11 @@
     return 'resultado compuesto';
   }
 
-  function getAfterLabel(mode, hasResult) {
+  function getAfterLabel(mode) {
     if (mode === 'surface') return 'Guía de superficie';
     if (mode === 'occluders') return 'Guía de oclusores';
     if (mode === 'shadows') return 'Guía de sombras';
-    return hasResult ? 'Después (render IA)' : 'Después (vista previa)';
+    return 'Después';
   }
 
   function getSessionId(clientId) {
