@@ -7,6 +7,7 @@
       id: 'wall',
       label: 'Pared',
       target: 'wall',
+      sceneMode: 'layered',
       imageUrl: '/visualizador-assets/wall-original.png',
       maskUrl: '/visualizador-assets/wall-mask.png',
       surfaceMaskUrl: '/visualizador-assets/wall-mask.png',
@@ -16,6 +17,13 @@
       shadowMaskUrl: '',
       shadowMaskMode: 'luma',
       projectionMode: 'wall',
+      finishOptions: [
+        { id: 'classic', label: 'Clasico', textureKey: 'classic' },
+        { id: 'fine', label: 'Texturado fino', textureKey: 'fine' },
+        { id: 'medium', label: 'Texturado medio', textureKey: 'medium' },
+        { id: 'coarse', label: 'Texturado grueso', textureKey: 'coarse' },
+        { id: 'historical', label: 'Historico', textureKey: 'historical' }
+      ],
       occluderShapes: [],
       defaults: { scale: 100, rotation: 0, offsetX: 0, offsetY: 0, opacity: 88, lighting: 35 }
     },
@@ -172,6 +180,7 @@
   ];
 
   const labels = { wall: 'Pared', floor: 'Piso', facade: 'Fachada' };
+  const defaultMaskEdits = { surface: [], occluders: [] };
 
   function ProceduralSwatch({ material, size = 90, className = '' }) {
     const ref = useRef(null);
@@ -226,6 +235,7 @@
     const [notice, setNotice] = useState('');
     const [budgetSent, setBudgetSent] = useState(false);
     const [controls, setControls] = useState(() => getTemplateControls(fallbackTemplates[0]));
+    const [selectedFinishId, setSelectedFinishId] = useState(fallbackTemplates[0]?.finishOptions?.[0]?.id || '');
     const [previewMode, setPreviewMode] = useState('material');
     const [maskEditor, setMaskEditor] = useState({ enabled: false, target: 'surface', tool: 'erase', brushSize: 28 });
     const [maskEdits, setMaskEdits] = useState({});
@@ -235,10 +245,15 @@
     const selectedTemplate = templates.find((item) => item.id === selectedTemplateId) || templates[0];
     const target = selectedTemplate.target;
     const targetMaterials = useMemo(() => materials.filter((item) => item.target === target), [materials, target]);
-    const selectedMaterial = targetMaterials.find((item) => item.id === materialId) || targetMaterials[0];
+    const finishOptions = useMemo(() => getFinishOptions(selectedTemplate), [selectedTemplate]);
+    const visibleMaterials = useMemo(
+      () => filterMaterialsForFinish(targetMaterials, selectedTemplate, selectedFinishId),
+      [targetMaterials, selectedTemplate, selectedFinishId]
+    );
+    const selectedMaterial = visibleMaterials.find((item) => item.id === materialId) || visibleMaterials[0] || targetMaterials[0];
     const displayedAfterSrc = quickPreviewUrl;
     const displayedAfterLabel = getAfterLabel(previewMode);
-    const currentMaskEdits = maskEdits[selectedTemplateId] || { surface: [], occluders: [] };
+    const currentMaskEdits = maskEdits[selectedTemplateId] || defaultMaskEdits;
 
     useEffect(() => {
       try {
@@ -274,8 +289,8 @@
     }, [maskEdits, maskStorageKey]);
 
     useEffect(() => {
-      if (!selectedMaterial && targetMaterials[0]) setMaterialId(targetMaterials[0].id);
-    }, [selectedMaterial, targetMaterials]);
+      if (!selectedMaterial && visibleMaterials[0]) setMaterialId(visibleMaterials[0].id);
+    }, [selectedMaterial, visibleMaterials]);
 
     useEffect(() => {
       if (!selectedTemplate) return;
@@ -284,6 +299,14 @@
         return getTemplateControls(selectedTemplate);
       });
     }, [selectedTemplate?.id]);
+
+    useEffect(() => {
+      const nextFinishId = finishOptions[0]?.id || '';
+      setSelectedFinishId((current) => {
+        if (finishOptions.some((finish) => finish.id === current)) return current;
+        return nextFinishId;
+      });
+    }, [selectedTemplate?.id, finishOptions]);
 
     useEffect(() => {
       if (!selectedMaterial || !selectedTemplate) {
@@ -295,7 +318,7 @@
       let cancelled = false;
       setPreviewLoading(true);
       const previewBuilder = previewMode === 'material'
-        ? buildInstantComposite(selectedTemplate, selectedMaterial, controls, currentMaskEdits)
+        ? buildInstantComposite(selectedTemplate, selectedMaterial, controls, currentMaskEdits, selectedFinishId)
         : buildGuidePreview(selectedTemplate, previewMode, currentMaskEdits);
 
       previewBuilder.then((url) => {
@@ -318,6 +341,9 @@
       selectedMaterial?.photo,
       selectedMaterial?.swatch,
       selectedMaterial?.color,
+      selectedMaterial?.texture,
+      selectedMaterial?.accent,
+      selectedFinishId,
       previewMode,
       maskEditVersion,
       controls.scale,
@@ -339,8 +365,10 @@
       const next = templates.find((item) => item.id === templateId);
       if (!next) return;
       const nextMaterials = materials.filter((item) => item.target === next.target);
+      const nextFinishId = next.finishOptions?.[0]?.id || '';
       setSelectedTemplateId(templateId);
       setMaterialId(nextMaterials[0]?.id || '');
+      setSelectedFinishId(nextFinishId);
       setResultUrl(null);
       setQuickPreviewUrl(null);
       setControls(getTemplateControls(next));
@@ -525,13 +553,35 @@
             </div>
           </div>
 
+          {finishOptions.length > 0 && (
+            <div>
+              <div className="ca-viz-label">Acabado</div>
+              <div className="ca-viz-finishes">
+                {finishOptions.map((finish) => (
+                  <button
+                    key={finish.id}
+                    type="button"
+                    className={selectedFinishId === finish.id ? 'active' : ''}
+                    onClick={() => setSelectedFinishId(finish.id)}
+                  >
+                    <FinishThumb finish={finish} color={selectedMaterial?.swatch || '#d8cfbf'} accent={selectedMaterial?.accent || '#b59d86'} />
+                    <span>{finish.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
-            <div className="ca-viz-label">Material para {labels[target].toLowerCase()}</div>
+            <div className="ca-viz-label">{finishOptions.length ? 'Color / material' : `Material para ${labels[target].toLowerCase()}`}</div>
             <div className="ca-viz-materials">
-              {targetMaterials.map((material) => (
+              {visibleMaterials.map((material) => (
                 <button key={material.id} className={selectedMaterial?.id === material.id ? 'active' : ''} onClick={() => { setMaterialId(material.id); setResultUrl(null); setBudgetSent(false); }}>
                   <MaterialThumb material={material} />
-                  <span>{material.label}</span>
+                  <span>
+                    <strong>{material.label}</strong>
+                    {material.category ? <small>{material.category}</small> : null}
+                  </span>
                 </button>
               ))}
             </div>
@@ -558,11 +608,46 @@
     );
   }
 
+  function TextureCanvas({ textureKey, color, accent, size = 62, className = '' }) {
+    const ref = useRef(null);
+
+    useEffect(() => {
+      if (!ref.current) return;
+      const canvas = ref.current;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      drawTexturePreview(ctx, size, size, textureKey, color, accent);
+    }, [textureKey, color, accent, size]);
+
+    return <canvas ref={ref} width={size} height={size} className={className} />;
+  }
+
+  function FinishThumb({ finish, color, accent }) {
+    return (
+      <TextureCanvas
+        textureKey={finish.textureKey}
+        color={color}
+        accent={accent}
+        size={72}
+        className="ca-viz-finish-thumb"
+      />
+    );
+  }
+
   function MaterialThumb({ material }) {
     if (material.photo) {
       return <img className="ca-viz-material-photo" src={material.photo} alt="" loading="lazy" />;
     }
-    return <span className="ca-viz-swatch" style={{ background: material.swatch || '#ccc' }}></span>;
+    return (
+      <TextureCanvas
+        textureKey={material.texture || (material.renderMode === 'paint' ? 'paint' : 'cement')}
+        color={material.swatch || material.color || '#ccc'}
+        accent={material.accent || deriveAccent(material.swatch || material.color || '#ccc')}
+        size={62}
+        className="ca-viz-swatch"
+      />
+    );
   }
 
   function RangeControl({ label, value, min, max, step, suffix = '', onChange }) {
@@ -575,7 +660,7 @@
     );
   }
 
-  async function buildInstantComposite(template, material, controls, maskEditsForTemplate = null) {
+  async function buildInstantComposite(template, material, controls, maskEditsForTemplate = null, selectedFinishId = '') {
     const surfaceMaskUrl = template?.surfaceMaskUrl || template?.maskUrl;
     if (!template?.imageUrl || !surfaceMaskUrl) return null;
 
@@ -609,13 +694,19 @@
       surfaceMaskData = applyMaskEditsToImageData(surfaceMaskData, maskEditsForTemplate?.surface, template.surfaceMaskMode || 'alpha-cutout');
       occluderMaskData = applyMaskEditsToImageData(occluderMaskData, maskEditsForTemplate?.occluders, template.occluderMaskMode || 'luma');
 
-      const tileCanvas = await buildMaterialTile(material, controls, template);
+      const finish = resolveFinish(template, selectedFinishId);
+      const tileCanvas = await buildMaterialTile(material, controls, template, finish);
       const projectedCanvas = document.createElement('canvas');
       projectedCanvas.width = width;
       projectedCanvas.height = height;
-      paintProjectedMaterial(projectedCanvas.getContext('2d'), tileCanvas, width, height, controls, template.projectionMode);
+      if (template.sceneMode === 'layered') {
+        paintLayeredMaterial(projectedCanvas.getContext('2d'), tileCanvas, width, height, controls, finish);
+      } else {
+        paintProjectedMaterial(projectedCanvas.getContext('2d'), tileCanvas, width, height, controls, template.projectionMode);
+      }
 
-      const projectedData = projectedCanvas.getContext('2d').getImageData(0, 0, width, height);
+      const projectedCtx = projectedCanvas.getContext('2d');
+      const projectedData = projectedCtx.getImageData(0, 0, width, height);
       const layerPixels = projectedData.data;
       const basePixels = baseData.data;
       const surfacePixels = surfaceMaskData.data;
@@ -623,6 +714,9 @@
       const shadowPixels = shadowMaskData?.data;
       const globalOpacity = controls.opacity / 100;
       const lightingStrength = controls.lighting / 100;
+      const effectiveOpacity = template.sceneMode === 'layered'
+        ? Math.max(globalOpacity, 0.96)
+        : globalOpacity;
 
       for (let i = 0; i < layerPixels.length; i += 4) {
         const surfaceAlpha = readMaskCoverage(surfacePixels, i, template.surfaceMaskMode || 'alpha-cutout');
@@ -646,32 +740,29 @@
         layerPixels[i] = clamp(layerPixels[i] * detailFactor * (1 - floorShadowBoost), 0, 255);
         layerPixels[i + 1] = clamp(layerPixels[i + 1] * detailFactor * (1 - floorShadowBoost), 0, 255);
         layerPixels[i + 2] = clamp(layerPixels[i + 2] * detailFactor * (1 - floorShadowBoost), 0, 255);
-        layerPixels[i + 3] = Math.round(255 * availableAlpha * globalOpacity);
+        layerPixels[i + 3] = Math.round(255 * availableAlpha * effectiveOpacity);
       }
 
-      projectedCanvas.getContext('2d').putImageData(projectedData, 0, 0);
+      projectedCtx.putImageData(projectedData, 0, 0);
 
       const outCanvas = document.createElement('canvas');
       outCanvas.width = width;
       outCanvas.height = height;
       const outCtx = outCanvas.getContext('2d');
-      outCtx.drawImage(baseImg, 0, 0, width, height);
-      outCtx.drawImage(projectedCanvas, 0, 0);
+      const layeredParts = buildSceneLayerCanvases(baseData, surfaceMaskData, occluderMaskData, template);
+      const surfaceDetailCanvas = template.sceneMode === 'layered'
+        ? buildSurfaceDetailCanvas(baseData, surfaceMaskData, template, finish)
+        : null;
 
-      if (occluderMaskData) {
-        const occluderCanvas = document.createElement('canvas');
-        occluderCanvas.width = width;
-        occluderCanvas.height = height;
-        const occluderCtx = occluderCanvas.getContext('2d');
-        occluderCtx.putImageData(baseData, 0, 0);
-
-        const isolatedOccluders = occluderCtx.getImageData(0, 0, width, height);
-        const isolatedPixels = isolatedOccluders.data;
-        for (let i = 0; i < isolatedPixels.length; i += 4) {
-          isolatedPixels[i + 3] = readMaskCoverage(occluderPixels, i, template.occluderMaskMode || 'luma');
-        }
-        occluderCtx.putImageData(isolatedOccluders, 0, 0);
-        outCtx.drawImage(occluderCanvas, 0, 0);
+      if (template.sceneMode === 'layered') {
+        if (layeredParts.backgroundCanvas) outCtx.drawImage(layeredParts.backgroundCanvas, 0, 0);
+        outCtx.drawImage(projectedCanvas, 0, 0);
+        drawSurfaceDetailOverlay(outCtx, surfaceDetailCanvas, finish);
+        if (layeredParts.foregroundCanvas) outCtx.drawImage(layeredParts.foregroundCanvas, 0, 0);
+      } else {
+        outCtx.drawImage(baseImg, 0, 0, width, height);
+        outCtx.drawImage(projectedCanvas, 0, 0);
+        if (layeredParts.foregroundCanvas) outCtx.drawImage(layeredParts.foregroundCanvas, 0, 0);
       }
 
       return outCanvas.toDataURL('image/png');
@@ -1327,7 +1418,7 @@
     ctx.fill();
   }
 
-  async function buildMaterialTile(material, controls, template) {
+  async function buildMaterialTile(material, controls, template, finish = null) {
     const tileSize = Math.max(160, Math.round(280 * (controls.scale / 100)));
     const tileCanvas = document.createElement('canvas');
     tileCanvas.width = tileSize;
@@ -1338,38 +1429,17 @@
       const matImg = await loadImage(material.photo);
       ctx.drawImage(matImg, 0, 0, tileSize, tileSize);
     } else {
-      drawProceduralTile(ctx, tileSize, material, template);
+      drawProceduralTile(ctx, tileSize, material, template, finish);
     }
 
     return tileCanvas;
   }
 
-  function drawProceduralTile(ctx, tileSize, material, template) {
+  function drawProceduralTile(ctx, tileSize, material, template, finish = null) {
     const baseColor = material?.swatch || material?.color || '#b8b7b0';
-    const seed = String(material?.id || material?.label || baseColor).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(0, 0, tileSize, tileSize);
-
-    for (let i = 0; i < 42; i++) {
-      const x = seeded(seed + i * 17) * tileSize;
-      const y = seeded(seed + i * 31) * tileSize;
-      const r = seeded(seed + i * 47) * (template?.projectionMode === 'floor' ? 24 : 18) + 6;
-      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    if (template?.projectionMode === 'floor') {
-      ctx.strokeStyle = 'rgba(0,0,0,0.08)';
-      ctx.lineWidth = 2;
-      for (let y = 0; y < tileSize; y += Math.max(28, Math.round(tileSize / 8))) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(tileSize, y);
-        ctx.stroke();
-      }
-    }
+    const accent = material?.accent || deriveAccent(baseColor);
+    const textureKey = finish?.textureKey || material?.texture || (material?.renderMode === 'paint' ? 'paint' : 'cement');
+    drawTexturePreview(ctx, tileSize, tileSize, textureKey, baseColor, accent, template?.projectionMode);
   }
 
   function paintProjectedMaterial(ctx, tileCanvas, width, height, controls, projectionMode = 'wall') {
@@ -1381,6 +1451,132 @@
     }
 
     drawFlatProjection(ctx, tileCanvas, width, height, controls, projectionMode === 'facade' ? 0.04 : 0);
+  }
+
+  function paintLayeredMaterial(ctx, tileCanvas, width, height, controls, finish = null) {
+    ctx.clearRect(0, 0, width, height);
+    const finishScale = finish?.id === 'fine' ? 1.08 : finish?.id === 'medium' ? 1 : finish?.id === 'coarse' ? 0.9 : finish?.id === 'historical' ? 0.94 : 1.05;
+    const scaledCanvas = scaleTileCanvas(tileCanvas, finishScale);
+    const layeredControls = {
+      ...controls,
+      rotation: finish?.id === 'historical' ? -2 : 0,
+      offsetX: Math.round((controls.offsetX || 0) * 0.28),
+      offsetY: Math.round((controls.offsetY || 0) * 0.24)
+    };
+    drawFlatProjection(ctx, scaledCanvas, width, height, layeredControls, finish?.id === 'historical' ? 0.02 : 0);
+  }
+
+  function drawTexturePreview(ctx, width, height, textureKey, color, accent, projectionMode = 'wall') {
+    const baseColor = color || '#d9d1c4';
+    const detailColor = accent || deriveAccent(baseColor);
+    const seed = String(`${textureKey}-${baseColor}-${detailColor}-${projectionMode}`).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = baseColor;
+    ctx.fillRect(0, 0, width, height);
+
+    if (textureKey === 'wood') {
+      for (let y = 0; y < height; y += 10) {
+        ctx.strokeStyle = y % 20 === 0 ? alpha(detailColor, 0.42) : 'rgba(255,255,255,.14)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, y + seeded(seed + y) * 4);
+        for (let x = 0; x <= width; x += 18) ctx.lineTo(x, y + Math.sin((x + seed) * 0.035) * 5);
+        ctx.stroke();
+      }
+      return;
+    }
+
+    if (textureKey === 'brick') {
+      ctx.strokeStyle = alpha(detailColor, 0.38);
+      ctx.lineWidth = 2;
+      const rowH = Math.max(20, Math.round(height / 4.2));
+      const brickW = Math.max(38, Math.round(width / 2.6));
+      for (let y = 0; y < height + rowH; y += rowH) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+        const offset = Math.floor(y / rowH) % 2 ? brickW / 2 : 0;
+        for (let x = -offset; x < width + brickW; x += brickW) {
+          ctx.beginPath();
+          ctx.moveTo(x, y);
+          ctx.lineTo(x, y + rowH);
+          ctx.stroke();
+        }
+      }
+      return;
+    }
+
+    if (textureKey === 'marble') {
+      for (let i = 0; i < 16; i++) {
+        ctx.strokeStyle = i % 3 === 0 ? alpha(detailColor, 0.35) : 'rgba(255,255,255,.22)';
+        ctx.lineWidth = seeded(seed + i) * 2 + 0.8;
+        ctx.beginPath();
+        const startY = seeded(seed + i * 9) * height;
+        ctx.moveTo(-20, startY);
+        for (let x = 0; x <= width + 20; x += 18) {
+          ctx.lineTo(x, startY + Math.sin((x + i * 21) * 0.045) * 10 + seeded(seed + x + i) * 7);
+        }
+        ctx.stroke();
+      }
+      return;
+    }
+
+    if (textureKey === 'stone' || textureKey === 'cement' || textureKey === 'classic') {
+      for (let i = 0; i < 46; i++) {
+        ctx.fillStyle = i % 2 ? alpha(detailColor, 0.14) : 'rgba(255,255,255,.09)';
+        ctx.beginPath();
+        ctx.arc(seeded(seed + i * 13) * width, seeded(seed + i * 29) * height, seeded(seed + i * 43) * 10 + 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      return;
+    }
+
+    if (textureKey === 'fine' || textureKey === 'medium' || textureKey === 'coarse' || textureKey === 'historical') {
+      const density = textureKey === 'fine' ? 150 : textureKey === 'medium' ? 110 : textureKey === 'coarse' ? 84 : 92;
+      const radius = textureKey === 'fine' ? 1.7 : textureKey === 'medium' ? 2.6 : textureKey === 'coarse' ? 4.1 : 3.3;
+      const shadowAlpha = textureKey === 'historical' ? 0.12 : 0.08;
+      for (let i = 0; i < density; i++) {
+        const x = seeded(seed + i * 17) * width;
+        const y = seeded(seed + i * 31) * height;
+        const r = radius + seeded(seed + i * 47) * radius;
+        ctx.fillStyle = i % 2 ? alpha(detailColor, 0.18) : `rgba(255,255,255,${textureKey === 'fine' ? 0.07 : 0.05})`;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (textureKey === 'historical') {
+        ctx.fillStyle = alpha(detailColor, shadowAlpha);
+        for (let i = 0; i < 7; i++) {
+          const w = width * (0.18 + seeded(seed + i * 11) * 0.24);
+          const h = height * (0.12 + seeded(seed + i * 21) * 0.2);
+          const x = seeded(seed + i * 9) * (width - w);
+          const y = seeded(seed + i * 15) * (height - h);
+          ctx.fillRect(x, y, w, h);
+        }
+      }
+      return;
+    }
+
+    if (textureKey === 'paint') {
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, baseColor);
+      grad.addColorStop(1, mixHex(baseColor, detailColor, 0.16));
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+      return;
+    }
+
+    for (let i = 0; i < 42; i++) {
+      const x = seeded(seed + i * 17) * width;
+      const y = seeded(seed + i * 31) * height;
+      const r = seeded(seed + i * 47) * (projectionMode === 'floor' ? 24 : 18) + 6;
+      ctx.fillStyle = i % 2 ? 'rgba(255,255,255,0.11)' : 'rgba(0,0,0,0.08)';
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawFlatProjection(ctx, tileCanvas, width, height, controls, verticalBreath = 0) {
@@ -1424,6 +1620,167 @@
       const destY = horizon + y;
       ctx.drawImage(patternCanvas, srcX, srcY, sourceWidth, 3, 0, destY, width, 3);
     }
+  }
+
+  function buildSceneLayerCanvases(baseData, surfaceMaskData, occluderMaskData, template) {
+    const width = baseData.width;
+    const height = baseData.height;
+    const surfacePixels = surfaceMaskData?.data;
+    const occluderPixels = occluderMaskData?.data;
+
+    const backgroundData = cloneImageData(baseData);
+    const foregroundData = cloneImageData(baseData);
+    const backgroundPixels = backgroundData.data;
+    const foregroundPixels = foregroundData.data;
+
+    for (let i = 0; i < backgroundPixels.length; i += 4) {
+      const surfaceCoverage = surfacePixels
+        ? readMaskCoverage(surfacePixels, i, template.surfaceMaskMode || 'alpha-cutout')
+        : 0;
+      const occluderCoverage = occluderPixels
+        ? readMaskCoverage(occluderPixels, i, template.occluderMaskMode || 'luma')
+        : 0;
+      const surfaceRatio = surfaceCoverage / 255;
+      const occluderRatio = occluderCoverage / 255;
+
+      if (template.sceneMode === 'layered') {
+        const backgroundKeep = clamp(1 - Math.max(surfaceRatio, occluderRatio), 0, 1);
+        backgroundPixels[i + 3] = Math.round(backgroundPixels[i + 3] * backgroundKeep);
+      }
+
+      foregroundPixels[i + 3] = occluderCoverage;
+    }
+
+    return {
+      backgroundCanvas: imageDataToCanvas(backgroundData),
+      foregroundCanvas: occluderPixels ? imageDataToCanvas(foregroundData) : null
+    };
+  }
+
+  function buildSurfaceDetailCanvas(baseData, surfaceMaskData, template, finish = null) {
+    const width = baseData.width;
+    const height = baseData.height;
+    const surfacePixels = surfaceMaskData?.data;
+    if (!surfacePixels) return null;
+
+    const detailData = new ImageData(width, height);
+    const output = detailData.data;
+    const source = baseData.data;
+    const strength = getLayeredDetailStrength(template, finish);
+
+    for (let i = 0; i < output.length; i += 4) {
+      const surfaceCoverage = readMaskCoverage(surfacePixels, i, template.surfaceMaskMode || 'alpha-cutout');
+      if (!surfaceCoverage) continue;
+      const luma = getLuma(source[i], source[i + 1], source[i + 2]);
+      const centered = clamp(128 + (luma - 128) * 1.22, 48, 214);
+      output[i] = centered;
+      output[i + 1] = centered;
+      output[i + 2] = centered;
+      output[i + 3] = Math.round(surfaceCoverage * strength);
+    }
+
+    return imageDataToCanvas(detailData);
+  }
+
+  function drawSurfaceDetailOverlay(ctx, detailCanvas, finish = null) {
+    if (!detailCanvas) return;
+    const blendMode = finish?.id === 'classic' ? 'soft-light' : 'multiply';
+    ctx.save();
+    ctx.globalCompositeOperation = blendMode;
+    ctx.globalAlpha = finish?.id === 'classic' ? 0.26 : 0.34;
+    ctx.drawImage(detailCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  function getLayeredDetailStrength(template, finish = null) {
+    if (template?.target !== 'wall') return 0.42;
+    if (finish?.id === 'classic') return 0.38;
+    if (finish?.id === 'historical') return 0.62;
+    if (finish?.id === 'coarse') return 0.56;
+    return 0.48;
+  }
+
+  function getFinishOptions(template) {
+    return Array.isArray(template?.finishOptions) ? template.finishOptions : [];
+  }
+
+  function resolveFinish(template, finishId) {
+    const options = getFinishOptions(template);
+    return options.find((finish) => finish.id === finishId) || options[0] || null;
+  }
+
+  function filterMaterialsForFinish(materials, template, finishId) {
+    const options = getFinishOptions(template);
+    if (!options.length) return materials;
+    const finish = resolveFinish(template, finishId);
+    if (!finish) return materials;
+    if (template?.target !== 'wall') return materials;
+    if (finish.id === 'historical') {
+      const historical = materials.filter((material) => material.texture === 'stone' || material.texture === 'brick');
+      return historical.length ? historical : materials;
+    }
+    if (finish.id === 'classic') {
+      const classic = materials.filter((material) => material.renderMode === 'paint' || material.texture === 'paint');
+      return classic.length ? classic : materials;
+    }
+    const filtered = materials.filter((material) => material.texture !== 'wood');
+    return filtered.length ? filtered : materials;
+  }
+
+  function alpha(hex, opacity) {
+    const { r, g, b } = parseHex(hex);
+    return `rgba(${r}, ${g}, ${b}, ${clamp(opacity, 0, 1)})`;
+  }
+
+  function deriveAccent(hex) {
+    const { r, g, b } = parseHex(hex);
+    return toHex(
+      Math.round(r * 0.72),
+      Math.round(g * 0.72),
+      Math.round(b * 0.72)
+    );
+  }
+
+  function mixHex(baseHex, otherHex, amount = 0.5) {
+    const base = parseHex(baseHex);
+    const other = parseHex(otherHex);
+    const t = clamp(amount, 0, 1);
+    return toHex(
+      Math.round(base.r + (other.r - base.r) * t),
+      Math.round(base.g + (other.g - base.g) * t),
+      Math.round(base.b + (other.b - base.b) * t)
+    );
+  }
+
+  function parseHex(hex) {
+    const value = String(hex || '').replace('#', '');
+    if (!/^[0-9a-fA-F]{6}$/.test(value)) return { r: 154, g: 160, b: 168 };
+    return {
+      r: parseInt(value.slice(0, 2), 16),
+      g: parseInt(value.slice(2, 4), 16),
+      b: parseInt(value.slice(4, 6), 16)
+    };
+  }
+
+  function imageDataToCanvas(imageData) {
+    const canvas = document.createElement('canvas');
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    canvas.getContext('2d').putImageData(imageData, 0, 0);
+    return canvas;
+  }
+
+  function scaleTileCanvas(tileCanvas, multiplier = 1) {
+    if (!tileCanvas || multiplier === 1) return tileCanvas;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(64, Math.round(tileCanvas.width * multiplier));
+    canvas.height = Math.max(64, Math.round(tileCanvas.height * multiplier));
+    canvas.getContext('2d').drawImage(tileCanvas, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
+  function toHex(r, g, b) {
+    return `#${[r, g, b].map((channel) => clamp(channel, 0, 255).toString(16).padStart(2, '0')).join('')}`;
   }
 
   function readMaskCoverage(pixels, index, mode = 'alpha-cutout') {

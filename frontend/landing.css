@@ -792,6 +792,45 @@ section#obras > div.container > div.reveal:nth-child(2) > div.obras-filter > but
   color: var(--bg);
 }
 
+.ca-viz-finishes {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.ca-viz-finishes button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  min-height: 128px;
+  padding: 12px;
+  text-align: center;
+}
+
+.ca-viz-finishes button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(196, 138, 74, .18);
+}
+
+.ca-viz-finishes button span {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.ca-viz-finish-thumb {
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  display: block;
+  height: 72px;
+  width: 72px;
+}
+
 .ca-viz-materials {
   display: grid;
   gap: 12px;
@@ -831,6 +870,22 @@ section#obras > div.container > div.reveal:nth-child(2) > div.obras-filter > but
   height: 62px;
   object-fit: cover;
   width: 62px;
+}
+
+.ca-viz-materials button span {
+  display: grid;
+  gap: 3px;
+}
+
+.ca-viz-materials button strong {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.ca-viz-materials button small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .ca-viz-generate {
@@ -1042,6 +1097,7 @@ section#obras > div.container > div.reveal:nth-child(2) > div.obras-filter > but
 }
 
 @media (max-width: 760px) {
+  .ca-viz-finishes,
   .ca-viz-control-grid,
   .ca-viz-tabs,
   .ca-viz-budget {
