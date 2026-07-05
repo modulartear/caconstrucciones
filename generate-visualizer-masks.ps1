@@ -79,23 +79,48 @@ $templates = @(
     source = 'wall-original.png'
     outputs = @(
       @{
-        file = 'wall-mask.png'
-        background = @(0, 0, 0, 0)
+        file = 'wall-mask-v2.png'
+        background = @(255, 0, 0, 0)
         shapes = @(
-          @{ kind = 'rect'; x = 0; y = 0; width = 1536; height = 122; color = @(255, 0, 0, 0) },
-          @{ kind = 'polygon'; points = @(@(0,0), @(140,0), @(168,1024), @(0,1024)); color = @(255, 0, 0, 0) },
-          @{ kind = 'polygon'; points = @(@(1238,0), @(1536,0), @(1536,1024), @(1218,1024)); color = @(255, 0, 0, 0) },
-          @{ kind = 'rect'; x = 0; y = 780; width = 1536; height = 244; color = @(255, 0, 0, 0) }
+          @{
+            kind = 'polygon'
+            points = @(
+              @(140,122),
+              @(1238,122),
+              @(1238,548),
+              @(1090,552),
+              @(1010,532),
+              @(850,526),
+              @(625,529),
+              @(435,523),
+              @(332,527),
+              @(286,552),
+              @(168,548)
+            )
+          }
         )
       }
       @{
-        file = 'wall-occluders.png'
+        file = 'wall-occluders-v2.png'
         shapes = @(
-          @{ kind = 'ellipse'; cx = 174; cy = 538; rx = 155; ry = 248; rotation = -4 },
-          @{ kind = 'rect'; x = 712; y = 229; width = 202; height = 233; radius = 4 },
-          @{ kind = 'polygon'; points = @(@(286,552), @(332,527), @(435,523), @(625,529), @(851,526), @(1008,532), @(1076,552), @(1098,580), @(1098,780), @(286,780)) },
-          @{ kind = 'ellipse'; cx = 1216; cy = 620; rx = 50; ry = 47; rotation = 0 },
-          @{ kind = 'rect'; x = 1188; y = 650; width = 66; height = 63; radius = 8 }
+          @{ kind = 'ellipse'; cx = 168; cy = 538; rx = 170; ry = 256; rotation = -4 },
+          @{ kind = 'rect'; x = 706; y = 222; width = 218; height = 244; radius = 6 },
+          @{
+            kind = 'polygon'
+            points = @(
+              @(272,390),
+              @(330,372),
+              @(428,360),
+              @(585,362),
+              @(770,360),
+              @(936,366),
+              @(1034,378),
+              @(1098,404),
+              @(1128,452),
+              @(1128,780),
+              @(272,780)
+            )
+          }
         )
       }
     )
