@@ -123,6 +123,77 @@ $templates = @(
           }
         )
       }
+      @{
+        file = 'floor-mask-v2.png'
+        background = @(255, 0, 0, 0)
+        shapes = @(
+          @{
+            kind = 'polygon'
+            points = @(
+              @(0,520),
+              @(775,520),
+              @(1024,682),
+              @(0,682)
+            )
+          }
+        )
+      }
+      @{
+        file = 'floor-occluders-v2.png'
+        shapes = @(
+          @{ kind = 'ellipse'; cx = 174; cy = 540; rx = 72; ry = 92; rotation = 0 },
+          @{
+            kind = 'polygon'
+            points = @(
+              @(240,405),
+              @(289,381),
+              @(357,383),
+              @(727,382),
+              @(756,391),
+              @(757,520),
+              @(240,520)
+            )
+          },
+          @{ kind = 'rect'; x = 443; y = 426; width = 202; height = 171; radius = 8 },
+          @{
+            kind = 'polygon'
+            points = @(
+              @(0,518),
+              @(798,518),
+              @(829,622),
+              @(0,682)
+            )
+          },
+          @{ kind = 'rect'; x = 765; y = 444; width = 259; height = 126; radius = 3 },
+          @{ kind = 'ellipse'; cx = 944; cy = 534; rx = 38; ry = 58; rotation = 0 }
+        )
+      }
+      @{
+        file = 'floor-shadows-v2.png'
+        shapes = @(
+          @{
+            kind = 'polygon'
+            points = @(
+              @(208,478),
+              @(780,478),
+              @(818,530),
+              @(178,535)
+            )
+            alpha = 0.52
+          },
+          @{ kind = 'rect'; x = 427; y = 457; width = 234; height = 126; radius = 18; alpha = 0.44 },
+          @{
+            kind = 'polygon'
+            points = @(
+              @(720,468),
+              @(1024,468),
+              @(1024,576),
+              @(744,576)
+            )
+            alpha = 0.38
+          }
+        )
+      }
     )
   },
   @{
