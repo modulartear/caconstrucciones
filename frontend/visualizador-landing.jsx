@@ -220,6 +220,7 @@
 
   function VisualizadorIAWidget({ apiUrl = '', clientId = 'ca-landing' }) {
     const maskStorageKey = `ca-viz-mask-edits-${clientId}`;
+    const debugMaskEditing = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('vizdebug') === '1';
     const [sessionId] = useState(() => getSessionId(clientId));
     const [templates, setTemplates] = useState(fallbackTemplates);
     const [selectedTemplateId, setSelectedTemplateId] = useState('wall');
@@ -253,12 +254,17 @@
     const selectedMaterial = visibleMaterials.find((item) => item.id === materialId) || visibleMaterials[0] || targetMaterials[0];
     const displayedAfterSrc = quickPreviewUrl;
     const displayedAfterLabel = getAfterLabel(previewMode);
-    const currentMaskEdits = maskEdits[selectedTemplateId] || defaultMaskEdits;
+    const currentMaskEdits = debugMaskEditing
+      ? (maskEdits[selectedTemplateId] || defaultMaskEdits)
+      : defaultMaskEdits;
 
     useEffect(() => {
       try {
-        const saved = window.localStorage.getItem(maskStorageKey);
-        if (saved) {
+        if (!debugMaskEditing) {
+          window.localStorage.removeItem(maskStorageKey);
+        }
+        const saved = debugMaskEditing ? window.localStorage.getItem(maskStorageKey) : null;
+        if (debugMaskEditing && saved) {
           const parsed = JSON.parse(saved);
           if (parsed && typeof parsed === 'object') {
             setMaskEdits(parsed);
@@ -278,15 +284,16 @@
       }).catch(() => setMaterials([]));
 
       refreshUsage();
-    }, [apiUrl, maskStorageKey, sessionId]);
+    }, [apiUrl, debugMaskEditing, maskStorageKey, sessionId]);
 
     useEffect(() => {
+      if (!debugMaskEditing) return;
       try {
         window.localStorage.setItem(maskStorageKey, JSON.stringify(maskEdits));
       } catch (err) {
         console.warn('No se pudieron guardar las mascaras editadas:', err);
       }
-    }, [maskEdits, maskStorageKey]);
+    }, [debugMaskEditing, maskEdits, maskStorageKey]);
 
     useEffect(() => {
       if (!selectedMaterial && visibleMaterials[0]) setMaterialId(visibleMaterials[0].id);
