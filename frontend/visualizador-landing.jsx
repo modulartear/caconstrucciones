@@ -8,7 +8,10 @@
   const WALL_MASK = '/visualizador-assets/wall-mask-v2.png';
 
   // La mascara PNG de oclusores esta vacia en este set de fotos: el sillon y la
-  // mesa se protegen recortando estos rectangulos (con difuminado) de la mascara.
+  // mesa se protegen recortando estos rectangulos (con difuminado) de la
+  // mascara de pared. La planta se protege aparte, por color (ver
+  // buildFoliageMaskCanvas), porque tiene hojas finas y espaciadas que un
+  // rectangulo fijo taparia de mas.
   const OCCLUDER_SHAPES = [
     { x: 870, y: 755, width: 370, height: 270, radius: 2, feather: 4 },
     { x: 1065, y: 530, width: 180, height: 280, radius: 30, feather: 6 }
@@ -190,7 +193,7 @@
 
   // Convierte la mascara de pared (grises: blanco = pared) en una mascara alpha
   // real y recorta el sillon/mesa, para poder usarla despues con destination-in.
-  function buildWallMaskCanvas(maskImg, width, height) {
+  function buildWallMaskCanvas(maskImg, photoImg, width, height) {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -217,9 +220,40 @@
       fillRoundedRect(ctx, shape.x, shape.y, shape.width, shape.height, shape.radius || 0);
       ctx.restore();
     });
+    ctx.drawImage(buildFoliageMaskCanvas(photoImg, width, height), 0, 0);
     ctx.restore();
 
     return canvas;
+  }
+
+  // La planta de la escena tiene hojas finas y espaciadas (se ve pared entre
+  // ellas), asi que un rectangulo fijo tapaba pared de mas. En vez de eso,
+  // protegemos directamente cualquier pixel verde (follaje) de la foto original.
+  function buildFoliageMaskCanvas(photoImg, width, height) {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(photoImg, 0, 0, width, height);
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const isFoliage = g > r + 12 && g > b + 20;
+      data[i] = 255;
+      data[i + 1] = 255;
+      data[i + 2] = 255;
+      data[i + 3] = isFoliage ? 255 : 0;
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    const softened = document.createElement('canvas');
+    softened.width = width;
+    softened.height = height;
+    const sctx = softened.getContext('2d');
+    sctx.filter = 'blur(3px)';
+    sctx.drawImage(canvas, 0, 0);
+    return softened;
   }
 
   function CompareSlider({ beforeSrc, afterSrc, beforeLabel = 'Antes', afterLabel = 'Después', loadingLabel = '' }) {
@@ -286,7 +320,7 @@
           const width = photo.naturalWidth || photo.width;
           const height = photo.naturalHeight || photo.height;
           setPhotoImg(photo);
-          setMaskCanvas(buildWallMaskCanvas(mask, width, height));
+          setMaskCanvas(buildWallMaskCanvas(mask, photo, width, height));
         })
         .catch(() => setError('No se pudo cargar la foto de la escena.'));
       return () => {

@@ -422,7 +422,7 @@ function TesterSection() {
             <div className="kicker">Tecnología CA</div>
             <h2 style={{ marginTop: 18 }}>Probá los materiales en tu obra antes de elegirlos.</h2>
           </Reveal>
-          <Reveal className="reveal-up"><p>Elegí una escena (pared, piso o fachada), tocá un material del catálogo y mirá el antes/después al instante. Si querés, generá además un render fotorrealista con IA.</p></Reveal>
+          <Reveal className="reveal-up"><p>Tocá un material de nuestro catálogo, elegí el modo de pintado y mirá el antes/después de la pared al instante.</p></Reveal>
         </div>
         <Reveal>
           <window.VisualizadorIAWidget apiUrl="" clientId="ca-landing" />
