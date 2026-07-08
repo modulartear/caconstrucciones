@@ -4,10 +4,6 @@
   "outputDirectory": "frontend",
   "routes": [
     {
-      "src": "^/$",
-      "dest": "/visualizador-materiales-v2.html"
-    },
-    {
       "src": "/api/templates",
       "dest": "/api/visualizador?action=templates"
     },

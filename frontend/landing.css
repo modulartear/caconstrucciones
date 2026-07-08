@@ -514,6 +514,24 @@ section { position: relative; padding: 120px 0; }
 .tester-mat .label { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(180deg, transparent, rgba(0,0,0,0.8)); padding: 14px 8px 6px; font-size: 10px; font-weight: 600; }
 
 .tester-tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.tester-embed-shell {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(8, 12, 16, 0.72);
+  box-shadow: 0 26px 70px rgba(0,0,0,0.32);
+}
+.tester-embed-frame {
+  display: block;
+  width: 100%;
+  min-height: 900px;
+  border: 0;
+  background: #161310;
+}
+@media (max-width: 980px) {
+  .tester-embed-shell { border-radius: 20px; }
+  .tester-embed-frame { min-height: 1040px; }
+}
 .tool-btn {
   padding: 9px 13px; font-size: 12px; font-weight: 600;
   border-radius: 9px; border: 1px solid var(--border);
