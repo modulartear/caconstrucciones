@@ -543,13 +543,22 @@ function drawImageContain(ctx, img, dx, dy, dw, dh, padding = 0, background = '#
   ctx.restore();
 }
 
-function buildPhotoTile(img, hex, size = 320){
-  const tile = document.createElement('canvas');
-  tile.width = size;
-  tile.height = size;
-  const ctx = tile.getContext('2d');
-  drawImageContain(ctx, img, 0, 0, size, size, Math.round(size * 0.08), hex || '#b8b7b0');
-  return tile;
+function drawImageCover(ctx, img, dx, dy, dw, dh, background = '#b8b7b0'){
+  if (!img) return;
+  ctx.save();
+  ctx.fillStyle = background;
+  ctx.fillRect(dx, dy, dw, dh);
+
+  const imgW = img.naturalWidth || img.width || dw;
+  const imgH = img.naturalHeight || img.height || dh;
+  const scale = Math.max(dw / imgW, dh / imgH);
+  const renderW = Math.max(1, Math.round(imgW * scale));
+  const renderH = Math.max(1, Math.round(imgH * scale));
+  const renderX = dx + Math.round((dw - renderW) / 2);
+  const renderY = dy + Math.round((dh - renderH) / 2);
+
+  ctx.drawImage(img, 0, 0, imgW, imgH, renderX, renderY, renderW, renderH);
+  ctx.restore();
 }
 
 function generarTextura(gen, baseHex){
@@ -615,13 +624,8 @@ function lienzoMaterial(esc, mat){
   const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
   const c = t.getContext('2d');
   if (mat.photoImage) {
-    const tile = buildPhotoTile(mat.photoImage, mat.hex, mat.tipo === 'panel' ? 360 : 300);
-    const pattern = c.createPattern(tile, 'repeat');
-    if (pattern) {
-      c.fillStyle = pattern;
-      c.fillRect(0, 0, esc.W, esc.H);
-      return t;
-    }
+    drawImageCover(c, mat.photoImage, 0, 0, esc.W, esc.H, mat.hex);
+    return t;
   }
   if (mat.tipo === 'textura'){
     c.fillStyle = c.createPattern(generarTextura(mat.gen, mat.hex), 'repeat');
