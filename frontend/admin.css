@@ -91,15 +91,22 @@ table.tbl th {
 table.tbl tr:last-child td { border-bottom: none; }
 table.tbl tr:hover td { background: rgba(255,255,255,0.015); }
 table.tbl td.actions { text-align: right; white-space: nowrap; }
+.tbl-row-clickable { cursor: pointer; }
+.tbl-row-clickable:focus-visible td { outline: 2px solid rgba(240,168,48,0.45); outline-offset: -2px; }
+.table-action-group { display: inline-flex; align-items: center; gap: 8px; }
 .icon-btn {
   background: transparent; border: 1px solid var(--border); border-radius: 8px;
   color: var(--muted); padding: 6px 8px;
   transition: all .2s;
-  display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   margin-left: 4px;
 }
 .icon-btn:hover { color: var(--text); border-color: var(--border-2); background: var(--bg); }
 .icon-btn.danger:hover { color: var(--danger); border-color: var(--danger); }
+.icon-btn span { font-size: 12px; font-weight: 600; }
+@media (max-width: 900px) {
+  .icon-btn span { display: none; }
+}
 
 .material-mini {
   display: flex; align-items: center; gap: 12px;

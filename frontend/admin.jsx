@@ -459,11 +459,12 @@ function MaterialesPage({ toast }) {
   );
 
   const save = async (mat) => {
+    const isExisting = Boolean(mat.id && materials.some((item) => item.id === mat.id));
     if (!mat.id) {
       mat.id = window.CAStore.uid('m');
     }
     await window.CAStore.saveItem('materials', mat);
-    toast(mat.id.startsWith('m_') || materials.some(m => m.id === mat.id) ? 'Material actualizado' : 'Material agregado al catálogo');
+    toast(isExisting ? 'Material actualizado' : 'Material agregado al catálogo');
     setEditing(null);
   };
   const remove = async (id) => {
@@ -496,10 +497,21 @@ function MaterialesPage({ toast }) {
           <div className="empty-state">No hay materiales con esos filtros.</div>
         ) : (
           <table className="tbl">
-            <thead><tr><th>Material</th><th>Categoría</th><th>Precio</th><th>Stock</th><th></th></tr></thead>
+            <thead><tr><th>Material</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
             <tbody>
               {filtered.map((m) => (
-                <tr key={m.id}>
+                <tr
+                  key={m.id}
+                  className="tbl-row-clickable"
+                  onClick={() => setEditing({ ...m })}
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setEditing({ ...m });
+                    }
+                  }}
+                >
                   <td>
                     <div className="material-mini">
                       {m.photo ? <img src={m.photo} alt="" /> : <ProceduralSwatch material={m} size={88} />}
@@ -513,12 +525,30 @@ function MaterialesPage({ toast }) {
                   <td><b>${m.price?.toLocaleString('es-AR')}</b> <span style={{ color: 'var(--muted)' }}>/{m.unit}</span></td>
                   <td>{m.stock}</td>
                   <td className="actions">
-                    <button className="icon-btn" onClick={() => setEditing(m)} title="Editar">
+                    <div className="table-action-group">
+                    <button
+                      className="icon-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditing({ ...m });
+                      }}
+                      title="Editar"
+                    >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      <span>Editar</span>
                     </button>
-                    <button className="icon-btn danger" onClick={() => setDelTarget(m)} title="Eliminar">
+                    <button
+                      className="icon-btn danger"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDelTarget(m);
+                      }}
+                      title="Eliminar"
+                    >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      <span>Eliminar</span>
                     </button>
+                    </div>
                   </td>
                 </tr>
               ))}
