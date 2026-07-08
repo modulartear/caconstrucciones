@@ -138,17 +138,7 @@ const ESCENAS = [
     baseOriginalUrl: encodeURI('/visualizador-assets/ChatGPT Image 5 jul 2026, 11_49_57 (3).png'),
     maskSourceUrl: encodeURI('/visualizador-assets/ChatGPT Image 5 jul 2026, 11_49_57 (2).png'),
     tituloLista:'Pinturas y revestimientos',
-    materiales:[
-      { id:'micro-claro', nombre:'Microcemento Claro', tipo:'color', hex:'#C9C2B8' },
-      { id:'micro-arena', nombre:'Microcemento Arena', tipo:'color', hex:'#C9B394' },
-      { id:'terracota',   nombre:'Terracota',          tipo:'color', hex:'#AA5040' },
-      { id:'verde',       nombre:'Verde Profundo',     tipo:'color', hex:'#123A2F' },
-      { id:'petroleo',    nombre:'Azul Petróleo',      tipo:'color', hex:'#23505F' },
-      { id:'grafito',     nombre:'Grafito',            tipo:'color', hex:'#4A4642' },
-      { id:'blanco',      nombre:'Blanco Cálido',      tipo:'color', hex:'#E8E2D6' },
-      { id:'ladrillo',    nombre:'Ladrillo Visto',     tipo:'textura', gen:'ladrillo' },
-      { id:'hormigon',    nombre:'Hormigón Visto',     tipo:'textura', gen:'hormigon' }
-    ],
+    materiales:[],
     etiquetaTipo:{ color:'Pintura', textura:'Revestimiento' },
     navZonas:[ { x0:1262, y0:90, x1:1536, y1:820, destino:1, dir:+1 } ]
   },
@@ -157,19 +147,32 @@ const ESCENAS = [
     baseOriginalUrl: encodeURI('/visualizador-assets/ChatGPT Image 8 jul 2026, 05_33_46.png'),
     maskSourceUrl: encodeURI('/visualizador-assets/ChatGPT Image 8 jul 2026, 05_33_46 (1).png'),
     tituloLista:'Paneles ranurados',
-    materiales:[
-      { id:'roble-nat',  nombre:'Roble Natural',  tipo:'panel', hex:'#C89A6B' },
-      { id:'roble-cl',   nombre:'Roble Claro',    tipo:'panel', hex:'#D9B98E' },
-      { id:'nogal',      nombre:'Nogal',          tipo:'panel', hex:'#7A4E2E' },
-      { id:'wengue',     nombre:'Wengué',         tipo:'panel', hex:'#4A342A' },
-      { id:'negro',      nombre:'Negro Mate',     tipo:'panel', hex:'#2A2725' },
-      { id:'nordico',    nombre:'Blanco Nórdico', tipo:'panel', hex:'#E5DED2' },
-      { id:'fume',       nombre:'Gris Fumé',      tipo:'panel', hex:'#8D857C' },
-      { id:'verde-p',    nombre:'Verde Profundo', tipo:'panel', hex:'#123A2F' }
-    ],
+    materiales:[],
     etiquetaTipo:{ panel:'Panel ranurado' },
     navZonas:[ { x0:190, y0:100, x1:810, y1:585, destino:0, dir:-1 } ]
   }
+];
+
+const FALLBACK_MATS_FRONTAL = [
+  { id:'micro-claro', nombre:'Microcemento Claro', tipo:'color', hex:'#C9C2B8' },
+  { id:'micro-arena', nombre:'Microcemento Arena', tipo:'color', hex:'#C9B394' },
+  { id:'terracota',   nombre:'Terracota',          tipo:'color', hex:'#AA5040' },
+  { id:'verde',       nombre:'Verde Profundo',     tipo:'color', hex:'#123A2F' },
+  { id:'petroleo',    nombre:'Azul Petróleo',      tipo:'color', hex:'#23505F' },
+  { id:'grafito',     nombre:'Grafito',            tipo:'color', hex:'#4A4642' },
+  { id:'blanco',      nombre:'Blanco Cálido',      tipo:'color', hex:'#E8E2D6' },
+  { id:'ladrillo',    nombre:'Ladrillo Visto',     tipo:'textura', gen:'ladrillo', hex:'#8A4A38' },
+  { id:'hormigon',    nombre:'Hormigón Visto',     tipo:'textura', gen:'cement', hex:'#A8A29A' }
+];
+const FALLBACK_MATS_RANURADA = [
+  { id:'roble-nat',  nombre:'Roble Natural',  tipo:'panel', hex:'#C89A6B' },
+  { id:'roble-cl',   nombre:'Roble Claro',    tipo:'panel', hex:'#D9B98E' },
+  { id:'nogal',      nombre:'Nogal',          tipo:'panel', hex:'#7A4E2E' },
+  { id:'wengue',     nombre:'Wengué',         tipo:'panel', hex:'#4A342A' },
+  { id:'negro',      nombre:'Negro Mate',     tipo:'panel', hex:'#2A2725' },
+  { id:'nordico',    nombre:'Blanco Nórdico', tipo:'panel', hex:'#E5DED2' },
+  { id:'fume',       nombre:'Gris Fumé',      tipo:'panel', hex:'#8D857C' },
+  { id:'verde-p',    nombre:'Verde Profundo', tipo:'panel', hex:'#123A2F' }
 ];
 
 const cubo = document.getElementById('cubo');
@@ -179,6 +182,58 @@ const chips = { der:document.getElementById('chipDerecha'), izq:document.getElem
 let escenaActual = 0;
 let caraActiva = 0;
 let girando = false;
+
+function guessMatKindForScene(sceneId, material) {
+  const category = String(material.category || '').toLowerCase();
+  const texture = String(material.texture || '').toLowerCase();
+  if (sceneId === 'ranurada') return 'panel';
+  if (texture === 'paint' || category.includes('pintura')) return 'color';
+  return 'textura';
+}
+
+function guessGenFromMaterial(material) {
+  const category = String(material.category || '').toLowerCase();
+  const texture = String(material.texture || '').toLowerCase();
+  if (category.includes('ladrill') || texture === 'brick') return 'ladrillo';
+  if (texture === 'wood' || category.includes('madera') || category.includes('piso')) return 'wood';
+  if (texture === 'stone' || category.includes('piedra') || category.includes('revest')) return 'stone';
+  return 'cement';
+}
+
+function buildSceneMaterials(sceneId, materials) {
+  const normalized = (materials || [])
+    .filter((m) => m && (m.label || m.name) && (m.swatch || m.color || m.swatch === '#000000' || m.color === '#000000'));
+
+  const filtered = normalized.filter((m) => {
+    const category = String(m.category || '').toLowerCase();
+    if (sceneId === 'frontal') {
+      return m.target === 'wall' || category.includes('pintura') || category.includes('revest') || category.includes('pared');
+    }
+    return category.includes('panel') || category.includes('madera') || category.includes('piso') || String(m.texture || '').toLowerCase() === 'wood';
+  });
+
+  const source = filtered.length ? filtered : normalized;
+  const out = source.slice(0, 60).map((m) => {
+    const nombre = m.label || m.name || 'Material';
+    const hex = m.swatch || m.color || '#b8b7b0';
+    const tipo = guessMatKindForScene(sceneId, m);
+    const gen = guessGenFromMaterial(m);
+    return { id: String(m.id || nombre), nombre, tipo, hex, gen, photo: m.photo || '' };
+  });
+
+  return out.length ? out : (sceneId === 'ranurada' ? FALLBACK_MATS_RANURADA : FALLBACK_MATS_FRONTAL);
+}
+
+async function loadMaterialsFromApi() {
+  try {
+    const res = await fetch('/api/materials', { method: 'GET' });
+    if (!res.ok) throw new Error('bad-status');
+    const data = await res.json();
+    return Array.isArray(data?.materials) ? data.materials : [];
+  } catch {
+    return [];
+  }
+}
 
 function cargarImagen(src){
   return new Promise((res, rej) => {
@@ -250,26 +305,68 @@ function pintarEscena(esc, cara){
   c.putImageData(esc.renderActual || new ImageData(esc.baseData.slice(), esc.W, esc.H), 0, 0);
 }
 
-function generarTextura(gen){
+function hexToRgb(hex){
+  const value = String(hex || '').replace('#','').trim();
+  if (!/^[0-9a-fA-F]{6}$/.test(value)) return { r: 168, g: 162, b: 154 };
+  return {
+    r: parseInt(value.slice(0,2), 16),
+    g: parseInt(value.slice(2,4), 16),
+    b: parseInt(value.slice(4,6), 16),
+  };
+}
+
+function generarTextura(gen, baseHex){
   const t = document.createElement('canvas'); t.width = 512; t.height = 512;
   const c = t.getContext('2d');
+  const base = hexToRgb(baseHex);
   if (gen === 'ladrillo'){
-    c.fillStyle = '#8A4A38'; c.fillRect(0,0,512,512);
+    c.fillStyle = `rgb(${Math.round(base.r*0.9)},${Math.round(base.g*0.75)},${Math.round(base.b*0.7)})`;
+    c.fillRect(0,0,512,512);
     const bh = 42, bw = 128;
     for (let f = 0; f*bh < 512+bh; f++){
       const off = (f%2)*(bw/2);
       for (let col = -1; col*bw < 512+bw; col++){
         const j = Math.abs(Math.sin(f*12.9 + col*78.2)) % 1;
-        c.fillStyle = `rgb(${150+j*24|0},${76+j*16|0},${58+j*12|0})`;
+        c.fillStyle = `rgb(${Math.min(255, base.r*0.85 + j*28)|0},${Math.min(255, base.g*0.82 + j*20)|0},${Math.min(255, base.b*0.78 + j*16)|0})`;
         c.fillRect(col*bw+off+3, f*bh+3, bw-6, bh-6);
       }
     }
+  } else if (gen === 'wood'){
+    c.fillStyle = `rgb(${base.r},${base.g},${base.b})`;
+    c.fillRect(0,0,512,512);
+    for (let i = 0; i < 140; i++){
+      const x = (i / 140) * 512;
+      const w = 2 + (Math.sin(i*2.9)*0.5 + 0.5) * 6;
+      const d = (Math.sin(i*1.7) * 0.5 + 0.5);
+      c.fillStyle = `rgba(0,0,0,${0.08 + d*0.12})`;
+      c.fillRect(x, 0, w, 512);
+    }
+    c.globalAlpha = 0.09;
+    for (let i = 0; i < 2400; i++){
+      const v = 30 + Math.random()*110 | 0;
+      c.fillStyle = `rgb(${v},${v*0.9|0},${v*0.7|0})`;
+      c.fillRect(Math.random()*512, Math.random()*512, 1, 1+Math.random()*4);
+    }
+    c.globalAlpha = 1;
+  } else if (gen === 'stone'){
+    c.fillStyle = `rgb(${base.r},${base.g},${base.b})`;
+    c.fillRect(0,0,512,512);
+    c.globalAlpha = 0.18;
+    for (let i = 0; i < 1400; i++){
+      const v = 90 + Math.random()*120 | 0;
+      c.fillStyle = `rgb(${v},${v},${v})`;
+      c.beginPath();
+      c.arc(Math.random()*512, Math.random()*512, 6+Math.random()*20, 0, Math.PI*2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
   } else {
-    c.fillStyle = '#A8A29A'; c.fillRect(0,0,512,512);
-    c.globalAlpha = .05;
+    c.fillStyle = `rgb(${base.r},${base.g},${base.b})`;
+    c.fillRect(0,0,512,512);
+    c.globalAlpha = .06;
     for (let i = 0; i < 9000; i++){
-      const v = 120 + Math.random()*110 | 0;
-      c.fillStyle = `rgb(${v},${v},${v-4})`;
+      const v = 110 + Math.random()*120 | 0;
+      c.fillStyle = `rgb(${v},${v},${Math.max(0, v-8)|0})`;
       c.fillRect(Math.random()*512, Math.random()*512, 1+Math.random()*3, 1+Math.random()*3);
     }
     c.globalAlpha = 1;
@@ -281,7 +378,7 @@ function lienzoMaterial(esc, mat){
   const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
   const c = t.getContext('2d');
   if (mat.tipo === 'textura'){
-    c.fillStyle = c.createPattern(generarTextura(mat.gen), 'repeat');
+    c.fillStyle = c.createPattern(generarTextura(mat.gen, mat.hex), 'repeat');
     c.fillRect(0, 0, esc.W, esc.H);
   } else {
     c.fillStyle = mat.hex; c.fillRect(0, 0, esc.W, esc.H);
@@ -471,6 +568,9 @@ function avisar(msj){
 }
 
 (async function(){
+  const dbMaterials = await loadMaterialsFromApi();
+  ESCENAS[0].materiales = buildSceneMaterials('frontal', dbMaterials);
+  ESCENAS[1].materiales = buildSceneMaterials('ranurada', dbMaterials);
   await Promise.all(ESCENAS.map(prepararEscena));
   pintarEscena(ESCENAS[0], caras[0]);
   construirLista();
