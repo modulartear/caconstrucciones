@@ -326,7 +326,16 @@ function buildSceneMaterials(sceneId, materials) {
     const hex = m.swatch || m.color || '#b8b7b0';
     const tipo = guessMatKindForScene(sceneId, m);
     const gen = guessGenFromMaterial(m);
-    return { id: String(m.id || nombre), nombre, tipo, hex, gen, photo: m.photo || '' };
+    return {
+      id: String(m.id || nombre),
+      nombre,
+      tipo,
+      hex,
+      gen,
+      photo: m.photo || '',
+      texture: m.texture || '',
+      category: m.category || ''
+    };
   });
 
   return out.length ? out : (sceneId === 'ranurada' ? FALLBACK_MATS_RANURADA : FALLBACK_MATS_FRONTAL);
@@ -561,6 +570,33 @@ function drawImageCover(ctx, img, dx, dy, dw, dh, background = '#b8b7b0'){
   ctx.restore();
 }
 
+function getAutoPhotoRepeatCount(mat) {
+  if (mat.tipo === 'panel') return 1;
+  if (mat.tipo === 'color') return 1;
+  if (mat.gen === 'ladrillo') return 5;
+  if (mat.gen === 'stone') return 4;
+  if (mat.gen === 'wood') return 3;
+  if (mat.gen === 'cement') return 3;
+  return 3;
+}
+
+function buildScaledPhotoPattern(img, esc, mat) {
+  const repeats = getAutoPhotoRepeatCount(mat);
+  if (repeats <= 1) return null;
+
+  const imgW = img.naturalWidth || img.width || esc.W;
+  const imgH = img.naturalHeight || img.height || esc.H;
+  const tileW = Math.max(180, Math.round(esc.W / repeats));
+  const tileH = Math.max(180, Math.round(tileW * (imgH / imgW)));
+
+  const tile = document.createElement('canvas');
+  tile.width = tileW;
+  tile.height = tileH;
+  const tileCtx = tile.getContext('2d');
+  drawImageCover(tileCtx, img, 0, 0, tileW, tileH, mat.hex || '#b8b7b0');
+  return tile;
+}
+
 function generarTextura(gen, baseHex){
   const t = document.createElement('canvas'); t.width = 512; t.height = 512;
   const c = t.getContext('2d');
@@ -624,6 +660,15 @@ function lienzoMaterial(esc, mat){
   const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
   const c = t.getContext('2d');
   if (mat.photoImage) {
+    const patternTile = buildScaledPhotoPattern(mat.photoImage, esc, mat);
+    if (patternTile) {
+      const pattern = c.createPattern(patternTile, 'repeat');
+      if (pattern) {
+        c.fillStyle = pattern;
+        c.fillRect(0, 0, esc.W, esc.H);
+        return t;
+      }
+    }
     drawImageCover(c, mat.photoImage, 0, 0, esc.W, esc.H, mat.hex);
     return t;
   }
