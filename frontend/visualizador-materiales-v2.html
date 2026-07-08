@@ -521,6 +521,37 @@ function hexToRgb(hex){
   };
 }
 
+function drawImageContain(ctx, img, dx, dy, dw, dh, padding = 0, background = '#b8b7b0'){
+  if (!img) return;
+  ctx.save();
+  ctx.fillStyle = background;
+  ctx.fillRect(dx, dy, dw, dh);
+
+  const innerX = dx + padding;
+  const innerY = dy + padding;
+  const innerW = Math.max(1, dw - padding * 2);
+  const innerH = Math.max(1, dh - padding * 2);
+  const imgW = img.naturalWidth || img.width || innerW;
+  const imgH = img.naturalHeight || img.height || innerH;
+  const scale = Math.min(innerW / imgW, innerH / imgH);
+  const renderW = Math.max(1, Math.round(imgW * scale));
+  const renderH = Math.max(1, Math.round(imgH * scale));
+  const renderX = innerX + Math.round((innerW - renderW) / 2);
+  const renderY = innerY + Math.round((innerH - renderH) / 2);
+
+  ctx.drawImage(img, 0, 0, imgW, imgH, renderX, renderY, renderW, renderH);
+  ctx.restore();
+}
+
+function buildPhotoTile(img, hex, size = 320){
+  const tile = document.createElement('canvas');
+  tile.width = size;
+  tile.height = size;
+  const ctx = tile.getContext('2d');
+  drawImageContain(ctx, img, 0, 0, size, size, Math.round(size * 0.08), hex || '#b8b7b0');
+  return tile;
+}
+
 function generarTextura(gen, baseHex){
   const t = document.createElement('canvas'); t.width = 512; t.height = 512;
   const c = t.getContext('2d');
@@ -584,7 +615,8 @@ function lienzoMaterial(esc, mat){
   const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
   const c = t.getContext('2d');
   if (mat.photoImage) {
-    const pattern = c.createPattern(mat.photoImage, 'repeat');
+    const tile = buildPhotoTile(mat.photoImage, mat.hex, mat.tipo === 'panel' ? 360 : 300);
+    const pattern = c.createPattern(tile, 'repeat');
     if (pattern) {
       c.fillStyle = pattern;
       c.fillRect(0, 0, esc.W, esc.H);
@@ -751,12 +783,12 @@ function chipMaterial(mat){
   chip.width = 64; chip.height = 44;
   const c = chip.getContext('2d');
   if (mat.photoImage) {
-    c.drawImage(mat.photoImage, 0, 0, mat.photoImage.naturalWidth || 64, mat.photoImage.naturalHeight || 44, 0, 0, 64, 44);
+    drawImageContain(c, mat.photoImage, 0, 0, 64, 44, 4, mat.hex);
   } else if (mat.photo) {
     const img = new Image();
     img.onload = () => {
       c.clearRect(0, 0, 64, 44);
-      c.drawImage(img, 0, 0, img.naturalWidth || 64, img.naturalHeight || 44, 0, 0, 64, 44);
+      drawImageContain(c, img, 0, 0, 64, 44, 4, mat.hex);
       const grImg = c.createLinearGradient(0, 0, 64, 44);
       grImg.addColorStop(0, 'rgba(255,255,255,.16)');
       grImg.addColorStop(.55, 'rgba(255,255,255,0)');
