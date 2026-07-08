@@ -23,7 +23,7 @@
   header h1 b{color:var(--cobre)}
   header .hint{font-size:12.5px; color:var(--hueso-2); margin-left:auto}
   .layout{display:flex; flex:1; min-height:0}
-  .escena{flex:1; display:flex; align-items:center; justify-content:center; padding:22px; min-width:0}
+  .escena{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:22px; min-width:0}
 
   .escenario{perspective:1700px; max-width:100%; width:min(100%, calc((100vh - 140px) * 1.5))}
   .cubo{
@@ -65,6 +65,31 @@
     transition:opacity .25s, transform .25s;
   }
   .toast.ver{opacity:1; transform:translateX(-50%) translateY(0)}
+  .compare-dock{
+    width:min(100%, calc((100vh - 140px) * 1.5));
+    background:rgba(27,23,19,.88);
+    border:1px solid var(--linea);
+    border-radius:18px;
+    padding:14px 18px 16px;
+    box-shadow:0 16px 44px rgba(0,0,0,.28);
+  }
+  .compare-head{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    margin-bottom:10px; font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--hueso-2); font-weight:700;
+  }
+  .compare-status{
+    color:var(--hueso); letter-spacing:.02em; text-transform:none; font-size:12px;
+  }
+  .compare-range{
+    width:100%;
+    accent-color:var(--cobre);
+    cursor:pointer;
+  }
+  .compare-scale{
+    display:flex; justify-content:space-between; margin-top:8px;
+    font-size:11px; color:var(--hueso-2); letter-spacing:.08em; text-transform:uppercase;
+  }
 
   aside{width:288px; border-left:1px solid var(--linea); background:var(--panel); display:flex; flex-direction:column; min-height:0}
   aside .titulo{
@@ -119,13 +144,23 @@
         <div class="toast" id="toast"></div>
       </div>
     </div>
+    <div class="compare-dock">
+      <div class="compare-head">
+        <span>Antes / Después</span>
+        <span class="compare-status" id="compareStatus">100% después</span>
+      </div>
+      <input class="compare-range" id="compareRange" type="range" min="0" max="100" step="1" value="100" />
+      <div class="compare-scale">
+        <span>Antes</span>
+        <span>Después</span>
+      </div>
+    </div>
   </div>
 
   <aside>
     <div class="titulo" id="tituloLista">Pinturas y revestimientos</div>
     <div class="materiales" id="listaMateriales"></div>
     <div class="acciones">
-      <button id="btnComparar" title="Mantené presionado para ver el original">Ver original</button>
       <button id="btnRestaurar">Restaurar</button>
     </div>
   </aside>
@@ -179,9 +214,12 @@ const cubo = document.getElementById('cubo');
 const caras = [document.getElementById('caraA'), document.getElementById('caraB')];
 const toast = document.getElementById('toast');
 const chips = { der:document.getElementById('chipDerecha'), izq:document.getElementById('chipIzquierda') };
+const compareRange = document.getElementById('compareRange');
+const compareStatus = document.getElementById('compareStatus');
 let escenaActual = 0;
 let caraActiva = 0;
 let girando = false;
+let compareValue = 100;
 
 function guessMatKindForScene(sceneId, material) {
   const category = String(material.category || '').toLowerCase();
@@ -302,7 +340,55 @@ function pintarEscena(esc, cara){
   cara.width = esc.W;
   cara.height = esc.H;
   const c = cara.getContext('2d');
-  c.putImageData(esc.renderActual || new ImageData(esc.baseData.slice(), esc.W, esc.H), 0, 0);
+  const split = Math.max(0, Math.min(esc.W, Math.round(esc.W * (compareValue / 100))));
+  const baseImage = new ImageData(esc.baseData.slice(), esc.W, esc.H);
+  c.putImageData(baseImage, 0, 0);
+
+  if (esc.renderActual && split > 0) {
+    if (split >= esc.W) {
+      c.putImageData(esc.renderActual, 0, 0);
+    } else {
+      const composed = new Uint8ClampedArray(esc.baseData);
+      const rendered = esc.renderActual.data;
+      for (let y = 0; y < esc.H; y++) {
+        const rowStart = y * esc.W * 4;
+        for (let x = 0; x < split; x++) {
+          const p = rowStart + x * 4;
+          composed[p] = rendered[p];
+          composed[p + 1] = rendered[p + 1];
+          composed[p + 2] = rendered[p + 2];
+          composed[p + 3] = rendered[p + 3];
+        }
+      }
+      c.putImageData(new ImageData(composed, esc.W, esc.H), 0, 0);
+    }
+  }
+
+  if (esc.renderActual && split > 0 && split < esc.W) {
+    c.save();
+    c.strokeStyle = 'rgba(237,230,220,0.95)';
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(split + 0.5, 0);
+    c.lineTo(split + 0.5, esc.H);
+    c.stroke();
+    c.fillStyle = '#C08A4D';
+    c.beginPath();
+    c.arc(split, esc.H / 2, 12, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = 'rgba(22,19,16,0.65)';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(split - 4, esc.H / 2);
+    c.lineTo(split + 4, esc.H / 2);
+    c.stroke();
+    c.restore();
+  }
+}
+
+function updateCompareStatus() {
+  const before = 100 - compareValue;
+  compareStatus.textContent = `${before}% antes · ${compareValue}% después`;
 }
 
 function hexToRgb(hex){
@@ -400,7 +486,7 @@ function aplicarMaterial(mat){
     out[p+2] = esc.baseData[p+2]*(1-a) + Math.min(255, mdata[p+2]*L)*a;
   }
   esc.renderActual = new ImageData(out, esc.W, esc.H);
-  caras[caraActiva].getContext('2d').putImageData(esc.renderActual, 0, 0);
+  pintarEscena(esc, caras[caraActiva]);
   avisar(`${mat.nombre} aplicado`);
 }
 
@@ -500,7 +586,7 @@ function chipMaterial(mat){
   chip.width = 64; chip.height = 44;
   const c = chip.getContext('2d');
   if (mat.tipo === 'textura'){
-    c.drawImage(generarTextura(mat.gen), 0, 0, 200, 140, 0, 0, 64, 44);
+    c.drawImage(generarTextura(mat.gen, mat.hex), 0, 0, 200, 140, 0, 0, 64, 44);
   } else {
     c.fillStyle = mat.hex; c.fillRect(0, 0, 64, 44);
     if (mat.tipo === 'panel'){
@@ -540,22 +626,17 @@ function construirLista(){
   });
 }
 
-const btnComparar = document.getElementById('btnComparar');
-function mostrarOriginal(on){
-  const esc = ESCENAS[escenaActual];
-  if (!esc.renderActual) return;
-  caras[caraActiva].getContext('2d').putImageData(
-    on ? new ImageData(esc.baseData.slice(), esc.W, esc.H) : esc.renderActual, 0, 0);
-}
-btnComparar.addEventListener('pointerdown', () => mostrarOriginal(true));
-['pointerup','pointerleave','pointercancel'].forEach(e =>
-  btnComparar.addEventListener(e, () => mostrarOriginal(false)));
+compareRange.addEventListener('input', () => {
+  compareValue = Number(compareRange.value || 100);
+  updateCompareStatus();
+  pintarEscena(ESCENAS[escenaActual], caras[caraActiva]);
+});
 
 document.getElementById('btnRestaurar').addEventListener('click', () => {
   const esc = ESCENAS[escenaActual];
   esc.materialActivo = null; esc.renderActual = null;
   document.querySelectorAll('.mat').forEach(b => b.classList.remove('activo'));
-  caras[caraActiva].getContext('2d').putImageData(new ImageData(esc.baseData.slice(), esc.W, esc.H), 0, 0);
+  pintarEscena(esc, caras[caraActiva]);
   actualizarChips();
   avisar('Ambiente restaurado');
 });
@@ -572,6 +653,7 @@ function avisar(msj){
   ESCENAS[0].materiales = buildSceneMaterials('frontal', dbMaterials);
   ESCENAS[1].materiales = buildSceneMaterials('ranurada', dbMaterials);
   await Promise.all(ESCENAS.map(prepararEscena));
+  updateCompareStatus();
   pintarEscena(ESCENAS[0], caras[0]);
   construirLista();
   actualizarChips();
