@@ -67,24 +67,87 @@
   .toast.ver{opacity:1; transform:translateX(-50%) translateY(0)}
   .compare-dock{
     width:min(100%, calc((100vh - 140px) * 1.5));
-    background:rgba(27,23,19,.88);
-    border:1px solid var(--linea);
-    border-radius:18px;
-    padding:14px 18px 16px;
-    box-shadow:0 16px 44px rgba(0,0,0,.28);
+    background:linear-gradient(180deg, rgba(33,27,22,.94), rgba(20,16,13,.92));
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:16px 18px 18px;
+    box-shadow:0 18px 54px rgba(0,0,0,.32);
   }
   .compare-head{
     display:flex; align-items:center; justify-content:space-between; gap:14px;
-    margin-bottom:10px; font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    margin-bottom:12px; font-size:12px; letter-spacing:.08em; text-transform:uppercase;
     color:var(--hueso-2); font-weight:700;
   }
+  .compare-head strong{
+    color:var(--hueso);
+    font-size:12px;
+    letter-spacing:.16em;
+  }
   .compare-status{
-    color:var(--hueso); letter-spacing:.02em; text-transform:none; font-size:12px;
+    color:var(--hueso);
+    letter-spacing:.02em;
+    text-transform:none;
+    font-size:12px;
+    padding:7px 11px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(255,255,255,.04);
+  }
+  .compare-range-wrap{
+    position:relative;
+    padding:8px 0 2px;
+  }
+  .compare-rail{
+    position:absolute;
+    left:0;
+    right:0;
+    top:50%;
+    height:8px;
+    transform:translateY(-50%);
+    border-radius:999px;
+    background:linear-gradient(90deg, rgba(237,230,220,.26), rgba(192,138,77,.42));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+    pointer-events:none;
   }
   .compare-range{
     width:100%;
-    accent-color:var(--cobre);
+    appearance:none;
+    -webkit-appearance:none;
+    background:transparent;
     cursor:pointer;
+    position:relative;
+    z-index:1;
+  }
+  .compare-range::-webkit-slider-runnable-track{
+    height:8px;
+    background:transparent;
+  }
+  .compare-range::-moz-range-track{
+    height:8px;
+    background:transparent;
+    border:none;
+  }
+  .compare-range::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:24px;
+    height:24px;
+    margin-top:-8px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.95);
+    background:
+      linear-gradient(90deg, transparent 47%, rgba(22,19,16,.66) 47%, rgba(22,19,16,.66) 53%, transparent 53%),
+      radial-gradient(circle at center, #fff 0 38%, #f4ede1 38% 100%);
+    box-shadow:0 6px 18px rgba(0,0,0,.28), 0 0 0 6px rgba(192,138,77,.16);
+  }
+  .compare-range::-moz-range-thumb{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    border:2px solid rgba(255,255,255,.95);
+    background:
+      linear-gradient(90deg, transparent 47%, rgba(22,19,16,.66) 47%, rgba(22,19,16,.66) 53%, transparent 53%),
+      radial-gradient(circle at center, #fff 0 38%, #f4ede1 38% 100%);
+    box-shadow:0 6px 18px rgba(0,0,0,.28), 0 0 0 6px rgba(192,138,77,.16);
   }
   .compare-scale{
     display:flex; justify-content:space-between; margin-top:8px;
@@ -146,14 +209,17 @@
     </div>
     <div class="compare-dock">
       <div class="compare-head">
-        <span>Antes / Después</span>
+        <strong>Antes / Después</strong>
         <span class="compare-status" id="compareStatus">100% después</span>
       </div>
-      <input class="compare-range" id="compareRange" type="range" min="0" max="100" step="1" value="100" />
-      <div class="compare-scale">
-        <span>Antes</span>
-        <span>Después</span>
-      </div>
+        <div class="compare-range-wrap">
+          <div class="compare-rail"></div>
+          <input class="compare-range" id="compareRange" type="range" min="0" max="100" step="1" value="100" />
+          <div class="compare-scale">
+            <span>Antes</span>
+            <span>Después</span>
+          </div>
+        </div>
     </div>
   </div>
 
@@ -372,15 +438,37 @@ function pintarEscena(esc, cara){
     c.moveTo(split + 0.5, 0);
     c.lineTo(split + 0.5, esc.H);
     c.stroke();
-    c.fillStyle = '#C08A4D';
+    c.shadowColor = 'rgba(0,0,0,0.28)';
+    c.shadowBlur = 18;
+    c.shadowOffsetY = 6;
+    c.fillStyle = '#fff';
     c.beginPath();
-    c.arc(split, esc.H / 2, 12, 0, Math.PI * 2);
+    c.arc(split, esc.H / 2, 18, 0, Math.PI * 2);
     c.fill();
-    c.strokeStyle = 'rgba(22,19,16,0.65)';
-    c.lineWidth = 2;
+    c.shadowColor = 'transparent';
+    c.strokeStyle = 'rgba(22,19,16,0.16)';
+    c.lineWidth = 1.5;
     c.beginPath();
-    c.moveTo(split - 4, esc.H / 2);
-    c.lineTo(split + 4, esc.H / 2);
+    c.arc(split, esc.H / 2, 18, 0, Math.PI * 2);
+    c.stroke();
+    c.strokeStyle = 'rgba(22,19,16,0.72)';
+    c.lineWidth = 2.4;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(split - 7, esc.H / 2);
+    c.lineTo(split - 2, esc.H / 2);
+    c.moveTo(split + 2, esc.H / 2);
+    c.lineTo(split + 7, esc.H / 2);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(split - 7, esc.H / 2);
+    c.lineTo(split - 4, esc.H / 2 - 3);
+    c.moveTo(split - 7, esc.H / 2);
+    c.lineTo(split - 4, esc.H / 2 + 3);
+    c.moveTo(split + 7, esc.H / 2);
+    c.lineTo(split + 4, esc.H / 2 - 3);
+    c.moveTo(split + 7, esc.H / 2);
+    c.lineTo(split + 4, esc.H / 2 + 3);
     c.stroke();
     c.restore();
   }
