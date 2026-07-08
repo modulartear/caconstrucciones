@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visualizador de Materiales — DiseArte</title>
+<style>
+  :root{
+    --carbon:#161310; --panel:#1B1713; --linea:#2E2822;
+    --hueso:#EDE6DC; --hueso-2:#A99F92; --cobre:#C08A4D;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    background:var(--carbon); color:var(--hueso); min-height:100vh;
+    font-family:-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{display:flex; align-items:baseline; gap:14px; padding:14px 22px; border-bottom:1px solid var(--linea)}
+  header h1{
+    font-family:'Arial Narrow',Impact,'Helvetica Neue',sans-serif;
+    font-weight:700; font-size:15px; letter-spacing:.22em; text-transform:uppercase;
+  }
+  header h1 b{color:var(--cobre)}
+  header .hint{font-size:12.5px; color:var(--hueso-2); margin-left:auto}
+  .layout{display:flex; flex:1; min-height:0}
+  .escena{flex:1; display:flex; align-items:center; justify-content:center; padding:22px; min-width:0}
+
+  .escenario{perspective:1700px; max-width:100%; width:min(100%, calc((100vh - 140px) * 1.5))}
+  .cubo{
+    position:relative; width:100%; aspect-ratio:1536/1024;
+    transform-style:preserve-3d;
+    transition:transform .95s cubic-bezier(.7,0,.22,1), filter .95s;
+  }
+  .cubo.girando{filter:brightness(.72)}
+  .cubo.girando .chip-nav, .cubo.girando .toast{opacity:0 !important; pointer-events:none}
+  .chip-nav .punto{
+    display:inline-block; width:7px; height:7px; border-radius:50%;
+    background:var(--cobre); margin-left:7px; vertical-align:1px;
+  }
+  canvas.cara{
+    position:absolute; inset:0; width:100%; height:100%;
+    border-radius:6px; box-shadow:0 24px 60px rgba(0,0,0,.5);
+    backface-visibility:hidden;
+  }
+  canvas.cara.interactiva{cursor:default}
+  canvas.cara.interactiva.sobre-pared{cursor:pointer}
+  @media (prefers-reduced-motion:reduce){ .cubo{transition:none} }
+
+  .chip-nav{
+    position:absolute; top:14px; z-index:5;
+    background:rgba(22,19,16,.85); border:1px solid var(--linea); color:var(--hueso);
+    font-size:12px; letter-spacing:.08em; text-transform:uppercase; font-weight:600;
+    padding:8px 14px; border-radius:99px; cursor:pointer; backdrop-filter:blur(4px);
+    transition:border-color .15s, color .15s;
+  }
+  .chip-nav:hover{border-color:var(--cobre); color:var(--cobre)}
+  .chip-nav:focus-visible{outline:2px solid var(--cobre); outline-offset:2px}
+  #chipDerecha{right:14px}
+  #chipIzquierda{left:14px}
+
+  .toast{
+    position:absolute; left:50%; bottom:18px; transform:translateX(-50%) translateY(8px); z-index:6;
+    background:rgba(22,19,16,.92); border:1px solid var(--linea); color:var(--hueso);
+    font-size:13px; padding:8px 16px; border-radius:99px; opacity:0; pointer-events:none;
+    transition:opacity .25s, transform .25s;
+  }
+  .toast.ver{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  aside{width:288px; border-left:1px solid var(--linea); background:var(--panel); display:flex; flex-direction:column; min-height:0}
+  aside .titulo{
+    padding:16px 18px 10px; margin:14px 0 4px;
+    font-family:'Arial Narrow',Impact,sans-serif; font-size:12px; font-weight:700;
+    letter-spacing:.24em; text-transform:uppercase; color:var(--hueso-2);
+    border-left:3px solid var(--cobre);
+  }
+  .materiales{overflow-y:auto; flex:1; padding:4px 14px 14px}
+  .mat{
+    display:flex; align-items:center; gap:12px; width:100%;
+    background:transparent; border:1px solid transparent; border-radius:8px;
+    padding:8px; margin-bottom:4px; cursor:pointer; text-align:left;
+    color:var(--hueso); transition:background .15s, border-color .15s;
+  }
+  .mat:hover{background:#221D18}
+  .mat.activo{border-color:var(--cobre); background:#241E17}
+  .mat canvas{border-radius:5px; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); flex-shrink:0}
+  .mat .nombre{font-size:13.5px; font-weight:600}
+  .mat .tipo{font-size:11px; color:var(--hueso-2); letter-spacing:.06em; text-transform:uppercase; margin-top:2px}
+  .acciones{padding:14px; border-top:1px solid var(--linea); display:flex; gap:10px}
+  .acciones button{
+    flex:1; padding:10px 12px; border-radius:8px; font-size:12.5px; font-weight:600;
+    letter-spacing:.05em; cursor:pointer; border:1px solid var(--linea);
+    background:#221D18; color:var(--hueso); transition:filter .15s;
+  }
+  .acciones button:hover{filter:brightness(1.15)}
+  .acciones button:focus-visible{outline:2px solid var(--cobre); outline-offset:2px}
+  #btnComparar:active{background:var(--cobre); color:var(--carbon)}
+  @media (max-width:880px){
+    .layout{flex-direction:column}
+    aside{width:100%; border-left:none; border-top:1px solid var(--linea); max-height:44vh}
+    .escena{padding:12px}
+    header .hint{display:none}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Visualizador de materiales <b>· DiseArte</b></h1>
+  <span class="hint">Elegí un material y tocá la pared · Tocá la otra pared para girar la vista</span>
+</header>
+
+<div class="layout">
+  <div class="escena">
+    <div class="escenario">
+      <div class="cubo" id="cubo">
+        <canvas class="cara interactiva" id="caraA"></canvas>
+        <canvas class="cara interactiva" id="caraB" style="visibility:hidden"></canvas>
+        <button class="chip-nav" id="chipDerecha">Pared ranurada ▸</button>
+        <button class="chip-nav" id="chipIzquierda" style="display:none">◂ Pared principal</button>
+        <div class="toast" id="toast"></div>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="titulo" id="tituloLista">Pinturas y revestimientos</div>
+    <div class="materiales" id="listaMateriales"></div>
+    <div class="acciones">
+      <button id="btnComparar" title="Mantené presionado para ver el original">Ver original</button>
+      <button id="btnRestaurar">Restaurar</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+const ESCENAS = [
+  {
+    id:'frontal',
+    baseOriginalUrl: encodeURI('/visualizador-assets/ChatGPT Image 5 jul 2026, 11_49_57 (3).png'),
+    maskSourceUrl: encodeURI('/visualizador-assets/ChatGPT Image 5 jul 2026, 11_49_57 (2).png'),
+    tituloLista:'Pinturas y revestimientos',
+    materiales:[
+      { id:'micro-claro', nombre:'Microcemento Claro', tipo:'color', hex:'#C9C2B8' },
+      { id:'micro-arena', nombre:'Microcemento Arena', tipo:'color', hex:'#C9B394' },
+      { id:'terracota',   nombre:'Terracota',          tipo:'color', hex:'#AA5040' },
+      { id:'verde',       nombre:'Verde Profundo',     tipo:'color', hex:'#123A2F' },
+      { id:'petroleo',    nombre:'Azul Petróleo',      tipo:'color', hex:'#23505F' },
+      { id:'grafito',     nombre:'Grafito',            tipo:'color', hex:'#4A4642' },
+      { id:'blanco',      nombre:'Blanco Cálido',      tipo:'color', hex:'#E8E2D6' },
+      { id:'ladrillo',    nombre:'Ladrillo Visto',     tipo:'textura', gen:'ladrillo' },
+      { id:'hormigon',    nombre:'Hormigón Visto',     tipo:'textura', gen:'hormigon' }
+    ],
+    etiquetaTipo:{ color:'Pintura', textura:'Revestimiento' },
+    navZonas:[ { x0:1262, y0:90, x1:1536, y1:820, destino:1, dir:+1 } ]
+  },
+  {
+    id:'ranurada',
+    baseOriginalUrl: encodeURI('/visualizador-assets/ChatGPT Image 8 jul 2026, 05_33_46.png'),
+    maskSourceUrl: encodeURI('/visualizador-assets/ChatGPT Image 8 jul 2026, 05_33_46 (1).png'),
+    tituloLista:'Paneles ranurados',
+    materiales:[
+      { id:'roble-nat',  nombre:'Roble Natural',  tipo:'panel', hex:'#C89A6B' },
+      { id:'roble-cl',   nombre:'Roble Claro',    tipo:'panel', hex:'#D9B98E' },
+      { id:'nogal',      nombre:'Nogal',          tipo:'panel', hex:'#7A4E2E' },
+      { id:'wengue',     nombre:'Wengué',         tipo:'panel', hex:'#4A342A' },
+      { id:'negro',      nombre:'Negro Mate',     tipo:'panel', hex:'#2A2725' },
+      { id:'nordico',    nombre:'Blanco Nórdico', tipo:'panel', hex:'#E5DED2' },
+      { id:'fume',       nombre:'Gris Fumé',      tipo:'panel', hex:'#8D857C' },
+      { id:'verde-p',    nombre:'Verde Profundo', tipo:'panel', hex:'#123A2F' }
+    ],
+    etiquetaTipo:{ panel:'Panel ranurado' },
+    navZonas:[ { x0:190, y0:100, x1:810, y1:585, destino:0, dir:-1 } ]
+  }
+];
+
+const cubo = document.getElementById('cubo');
+const caras = [document.getElementById('caraA'), document.getElementById('caraB')];
+const toast = document.getElementById('toast');
+const chips = { der:document.getElementById('chipDerecha'), izq:document.getElementById('chipIzquierda') };
+let escenaActual = 0;
+let caraActiva = 0;
+let girando = false;
+
+function cargarImagen(src){
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.crossOrigin = 'anonymous';
+    im.onload = () => res(im);
+    im.onerror = rej;
+    im.src = src;
+  });
+}
+
+function computeMaskAlphaFromWhitePixels(pixels, threshold = 248, softRange = 18){
+  const N = pixels.length / 4;
+  const out = new Float32Array(N);
+  for (let i = 0; i < N; i++){
+    const p = i * 4;
+    const r = pixels[p], g = pixels[p+1], b = pixels[p+2];
+    const minv = Math.min(r,g,b);
+    if (minv >= threshold) out[i] = 1;
+    else if (minv >= threshold - softRange) out[i] = (minv - (threshold - softRange)) / softRange;
+  }
+  return out;
+}
+
+async function prepararEscena(esc){
+  const [imOriginal, imMaskSource] = await Promise.all([
+    cargarImagen(esc.baseOriginalUrl),
+    cargarImagen(esc.maskSourceUrl)
+  ]);
+
+  esc.W = imOriginal.naturalWidth || imOriginal.width;
+  esc.H = imOriginal.naturalHeight || imOriginal.height;
+
+  const off = document.createElement('canvas');
+  off.width = esc.W;
+  off.height = esc.H;
+  const octx = off.getContext('2d', { willReadFrequently:true });
+
+  octx.drawImage(imOriginal, 0, 0, esc.W, esc.H);
+  const originalImageData = octx.getImageData(0, 0, esc.W, esc.H);
+  esc.baseData = originalImageData.data.slice();
+
+  octx.clearRect(0, 0, esc.W, esc.H);
+  octx.drawImage(imMaskSource, 0, 0, esc.W, esc.H);
+  const md = octx.getImageData(0, 0, esc.W, esc.H).data;
+
+  const N = esc.W * esc.H;
+  esc.maskAlpha = computeMaskAlphaFromWhitePixels(md);
+  esc.lum = new Float32Array(N);
+
+  let suma = 0, cuenta = 0;
+  for (let i = 0; i < N; i++){
+    const p = i*4;
+    const g = 0.299*esc.baseData[p] + 0.587*esc.baseData[p+1] + 0.114*esc.baseData[p+2];
+    esc.lum[i] = g;
+    if (esc.maskAlpha[i] > 0.5){ suma += g; cuenta++; }
+  }
+  const media = cuenta ? (suma / cuenta) : 128;
+  for (let i = 0; i < N; i++) esc.lum[i] /= media;
+
+  esc.renderActual = null;
+  esc.materialActivo = null;
+}
+
+function pintarEscena(esc, cara){
+  cara.width = esc.W;
+  cara.height = esc.H;
+  const c = cara.getContext('2d');
+  c.putImageData(esc.renderActual || new ImageData(esc.baseData.slice(), esc.W, esc.H), 0, 0);
+}
+
+function generarTextura(gen){
+  const t = document.createElement('canvas'); t.width = 512; t.height = 512;
+  const c = t.getContext('2d');
+  if (gen === 'ladrillo'){
+    c.fillStyle = '#8A4A38'; c.fillRect(0,0,512,512);
+    const bh = 42, bw = 128;
+    for (let f = 0; f*bh < 512+bh; f++){
+      const off = (f%2)*(bw/2);
+      for (let col = -1; col*bw < 512+bw; col++){
+        const j = Math.abs(Math.sin(f*12.9 + col*78.2)) % 1;
+        c.fillStyle = `rgb(${150+j*24|0},${76+j*16|0},${58+j*12|0})`;
+        c.fillRect(col*bw+off+3, f*bh+3, bw-6, bh-6);
+      }
+    }
+  } else {
+    c.fillStyle = '#A8A29A'; c.fillRect(0,0,512,512);
+    c.globalAlpha = .05;
+    for (let i = 0; i < 9000; i++){
+      const v = 120 + Math.random()*110 | 0;
+      c.fillStyle = `rgb(${v},${v},${v-4})`;
+      c.fillRect(Math.random()*512, Math.random()*512, 1+Math.random()*3, 1+Math.random()*3);
+    }
+    c.globalAlpha = 1;
+  }
+  return t;
+}
+
+function lienzoMaterial(esc, mat){
+  const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
+  const c = t.getContext('2d');
+  if (mat.tipo === 'textura'){
+    c.fillStyle = c.createPattern(generarTextura(mat.gen), 'repeat');
+    c.fillRect(0, 0, esc.W, esc.H);
+  } else {
+    c.fillStyle = mat.hex; c.fillRect(0, 0, esc.W, esc.H);
+  }
+  return t;
+}
+
+function aplicarMaterial(mat){
+  const esc = ESCENAS[escenaActual];
+  const mdata = lienzoMaterial(esc, mat).getContext('2d').getImageData(0, 0, esc.W, esc.H).data;
+  const out = new Uint8ClampedArray(esc.baseData);
+  const N = esc.W * esc.H;
+  for (let i = 0; i < N; i++){
+    const a = esc.maskAlpha[i];
+    if (a === 0) continue;
+    const L = esc.lum[i], p = i*4;
+    out[p]   = esc.baseData[p]  *(1-a) + Math.min(255, mdata[p]  *L)*a;
+    out[p+1] = esc.baseData[p+1]*(1-a) + Math.min(255, mdata[p+1]*L)*a;
+    out[p+2] = esc.baseData[p+2]*(1-a) + Math.min(255, mdata[p+2]*L)*a;
+  }
+  esc.renderActual = new ImageData(out, esc.W, esc.H);
+  caras[caraActiva].getContext('2d').putImageData(esc.renderActual, 0, 0);
+  avisar(`${mat.nombre} aplicado`);
+}
+
+function coordsImagen(ev, cara){
+  const esc = ESCENAS[escenaActual];
+  const r = cara.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - r.left) / r.width * esc.W);
+  const y = Math.floor((ev.clientY - r.top) / r.height * esc.H);
+  return { x, y, dentro: x >= 0 && y >= 0 && x < esc.W && y < esc.H };
+}
+function esPared(x, y){
+  const esc = ESCENAS[escenaActual];
+  return esc.maskAlpha[y*esc.W + x] > 0.5;
+}
+function zonaNav(x, y){
+  return ESCENAS[escenaActual].navZonas.find(z => x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1) || null;
+}
+
+caras.forEach(cara => {
+  cara.addEventListener('mousemove', ev => {
+    if (girando || cara !== caras[caraActiva]) return;
+    const { x, y, dentro } = coordsImagen(ev, cara);
+    cara.classList.toggle('sobre-pared', dentro && (esPared(x, y) || !!zonaNav(x, y)));
+  });
+  cara.addEventListener('click', ev => {
+    if (girando || cara !== caras[caraActiva]) return;
+    const { x, y, dentro } = coordsImagen(ev, cara);
+    if (!dentro) return;
+    if (esPared(x, y)){
+      const esc = ESCENAS[escenaActual];
+      if (esc.materialActivo) aplicarMaterial(esc.materialActivo);
+      else avisar('Pared seleccionada — elegí un material de la lista');
+      return;
+    }
+    const z = zonaNav(x, y);
+    if (z) girarHacia(z.destino, z.dir);
+  });
+});
+
+function girarHacia(destino, dir){
+  if (girando || destino === escenaActual) return;
+  girando = true;
+  const escNueva = ESCENAS[destino];
+  const caraSaliente = caras[caraActiva];
+  const caraEntrante = caras[1 - caraActiva];
+
+  pintarEscena(escNueva, caraEntrante);
+  caraEntrante.style.visibility = 'visible';
+
+  const Z = cubo.getBoundingClientRect().width / 2;
+  cubo.style.transition = 'none';
+  caraSaliente.style.transform = `translateZ(${Z}px)`;
+  caraEntrante.style.transform = `rotateY(${dir*90}deg) translateZ(${Z}px)`;
+  cubo.style.transform = `translateZ(${-Z}px)`;
+  cubo.getBoundingClientRect();
+
+  cubo.style.transition = '';
+  cubo.classList.add('girando');
+  cubo.style.transform = `translateZ(${-Z}px) rotateY(${-dir*90}deg)`;
+
+  const fin = () => {
+    cubo.removeEventListener('transitionend', fin);
+    escenaActual = destino;
+    caraActiva = 1 - caraActiva;
+    cubo.style.transition = 'none';
+    cubo.style.transform = 'none';
+    caraEntrante.style.transform = 'none';
+    caraSaliente.style.transform = 'none';
+    caraSaliente.style.visibility = 'hidden';
+    cubo.getBoundingClientRect();
+    cubo.style.transition = '';
+    cubo.classList.remove('girando');
+    girando = false;
+    construirLista();
+    actualizarChips();
+    avisar(destino === 1 ? 'Pared ranurada — elegí un panel' : 'Pared principal');
+  };
+  cubo.addEventListener('transitionend', fin);
+  setTimeout(() => { if (girando) fin(); }, 1100);
+}
+
+chips.der.addEventListener('click', () => girarHacia(1, +1));
+chips.izq.addEventListener('click', () => girarHacia(0, -1));
+function actualizarChips(){
+  chips.der.style.display = escenaActual === 0 ? '' : 'none';
+  chips.izq.style.display = escenaActual === 1 ? '' : 'none';
+  const otra = ESCENAS[1 - escenaActual];
+  const chip = escenaActual === 0 ? chips.der : chips.izq;
+  const base = escenaActual === 0 ? 'Pared ranurada ▸' : '◂ Pared principal';
+  chip.innerHTML = otra.materialActivo
+    ? `${base}<span class="punto" title="${otra.materialActivo.nombre} aplicado"></span>`
+    : base;
+}
+
+function chipMaterial(mat){
+  const chip = document.createElement('canvas');
+  chip.width = 64; chip.height = 44;
+  const c = chip.getContext('2d');
+  if (mat.tipo === 'textura'){
+    c.drawImage(generarTextura(mat.gen), 0, 0, 200, 140, 0, 0, 64, 44);
+  } else {
+    c.fillStyle = mat.hex; c.fillRect(0, 0, 64, 44);
+    if (mat.tipo === 'panel'){
+      c.fillStyle = 'rgba(0,0,0,.45)';
+      for (let x = 4; x < 64; x += 8) c.fillRect(x, 0, 2, 44);
+    }
+  }
+  const gr = c.createLinearGradient(0, 0, 64, 44);
+  gr.addColorStop(0, 'rgba(255,255,255,.16)');
+  gr.addColorStop(.55, 'rgba(255,255,255,0)');
+  gr.addColorStop(1, 'rgba(0,0,0,.22)');
+  c.fillStyle = gr; c.fillRect(0, 0, 64, 44);
+  return chip;
+}
+
+function construirLista(){
+  const esc = ESCENAS[escenaActual];
+  document.getElementById('tituloLista').textContent = esc.tituloLista;
+  const cont = document.getElementById('listaMateriales');
+  cont.innerHTML = '';
+  esc.materiales.forEach(mat => {
+    const btn = document.createElement('button');
+    btn.className = 'mat' + (esc.materialActivo === mat ? ' activo' : '');
+    const info = document.createElement('div');
+    info.innerHTML = `<div class="nombre">${mat.nombre}</div><div class="tipo">${esc.etiquetaTipo[mat.tipo] || mat.tipo}</div>`;
+    btn.appendChild(chipMaterial(mat));
+    btn.appendChild(info);
+    btn.addEventListener('click', () => {
+      if (girando) return;
+      cont.querySelectorAll('.mat').forEach(b => b.classList.remove('activo'));
+      btn.classList.add('activo');
+      esc.materialActivo = mat;
+      aplicarMaterial(mat);
+      actualizarChips();
+    });
+    cont.appendChild(btn);
+  });
+}
+
+const btnComparar = document.getElementById('btnComparar');
+function mostrarOriginal(on){
+  const esc = ESCENAS[escenaActual];
+  if (!esc.renderActual) return;
+  caras[caraActiva].getContext('2d').putImageData(
+    on ? new ImageData(esc.baseData.slice(), esc.W, esc.H) : esc.renderActual, 0, 0);
+}
+btnComparar.addEventListener('pointerdown', () => mostrarOriginal(true));
+['pointerup','pointerleave','pointercancel'].forEach(e =>
+  btnComparar.addEventListener(e, () => mostrarOriginal(false)));
+
+document.getElementById('btnRestaurar').addEventListener('click', () => {
+  const esc = ESCENAS[escenaActual];
+  esc.materialActivo = null; esc.renderActual = null;
+  document.querySelectorAll('.mat').forEach(b => b.classList.remove('activo'));
+  caras[caraActiva].getContext('2d').putImageData(new ImageData(esc.baseData.slice(), esc.W, esc.H), 0, 0);
+  actualizarChips();
+  avisar('Ambiente restaurado');
+});
+
+function avisar(msj){
+  toast.textContent = msj;
+  toast.classList.add('ver');
+  clearTimeout(avisar._t);
+  avisar._t = setTimeout(() => toast.classList.remove('ver'), 2200);
+}
+
+(async function(){
+  await Promise.all(ESCENAS.map(prepararEscena));
+  pintarEscena(ESCENAS[0], caras[0]);
+  construirLista();
+  actualizarChips();
+})();
+</script>
+</body>
+</html>
+
