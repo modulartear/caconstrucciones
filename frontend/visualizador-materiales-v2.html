@@ -44,6 +44,7 @@
   }
   canvas.cara.interactiva{cursor:default}
   canvas.cara.interactiva.sobre-pared{cursor:pointer}
+  canvas.cara.interactiva.sobre-comparador{cursor:ew-resize}
   @media (prefers-reduced-motion:reduce){ .cubo{transition:none} }
 
   .chip-nav{
@@ -286,6 +287,9 @@ let escenaActual = 0;
 let caraActiva = 0;
 let girando = false;
 let compareValue = 100;
+let compareDragging = false;
+let compareDragMoved = false;
+let suppressCanvasClick = false;
 
 function guessMatKindForScene(sceneId, material) {
   const category = String(material.category || '').toLowerCase();
@@ -479,6 +483,23 @@ function updateCompareStatus() {
   compareStatus.textContent = `${before}% antes · ${compareValue}% después`;
 }
 
+function getCompareSplit(esc) {
+  return Math.max(0, Math.min(esc.W, Math.round(esc.W * (compareValue / 100))));
+}
+
+function setCompareFromX(x, esc) {
+  compareValue = Math.max(0, Math.min(100, Math.round((x / esc.W) * 100)));
+  compareRange.value = String(compareValue);
+  updateCompareStatus();
+  pintarEscena(esc, caras[caraActiva]);
+}
+
+function isNearCompareDivider(x, esc) {
+  if (!esc.renderActual) return false;
+  const split = getCompareSplit(esc);
+  return Math.abs(x - split) <= 28;
+}
+
 function hexToRgb(hex){
   const value = String(hex || '').replace('#','').trim();
   if (!/^[0-9a-fA-F]{6}$/.test(value)) return { r: 168, g: 162, b: 154 };
@@ -597,10 +618,47 @@ caras.forEach(cara => {
   cara.addEventListener('mousemove', ev => {
     if (girando || cara !== caras[caraActiva]) return;
     const { x, y, dentro } = coordsImagen(ev, cara);
-    cara.classList.toggle('sobre-pared', dentro && (esPared(x, y) || !!zonaNav(x, y)));
+    const overDivider = dentro && isNearCompareDivider(x, ESCENAS[escenaActual]);
+    cara.classList.toggle('sobre-comparador', overDivider || compareDragging);
+    cara.classList.toggle('sobre-pared', !overDivider && dentro && (esPared(x, y) || !!zonaNav(x, y)));
   });
+  cara.addEventListener('pointerdown', ev => {
+    if (girando || cara !== caras[caraActiva]) return;
+    const coords = coordsImagen(ev, cara);
+    if (!coords.dentro) return;
+    const esc = ESCENAS[escenaActual];
+    if (!isNearCompareDivider(coords.x, esc)) return;
+    compareDragging = true;
+    compareDragMoved = false;
+    cara.classList.add('sobre-comparador');
+    cara.setPointerCapture?.(ev.pointerId);
+    ev.preventDefault();
+  });
+  cara.addEventListener('pointermove', ev => {
+    if (!compareDragging || cara !== caras[caraActiva]) return;
+    const coords = coordsImagen(ev, cara);
+    const esc = ESCENAS[escenaActual];
+    if (coords.dentro) {
+      setCompareFromX(coords.x, esc);
+      compareDragMoved = true;
+    }
+    ev.preventDefault();
+  });
+  const stopCompareDrag = (ev) => {
+    if (!compareDragging) return;
+    compareDragging = false;
+    cara.releasePointerCapture?.(ev.pointerId);
+    if (compareDragMoved) suppressCanvasClick = true;
+    compareDragMoved = false;
+  };
+  cara.addEventListener('pointerup', stopCompareDrag);
+  cara.addEventListener('pointercancel', stopCompareDrag);
   cara.addEventListener('click', ev => {
     if (girando || cara !== caras[caraActiva]) return;
+    if (suppressCanvasClick) {
+      suppressCanvasClick = false;
+      return;
+    }
     const { x, y, dentro } = coordsImagen(ev, cara);
     if (!dentro) return;
     if (esPared(x, y)){
