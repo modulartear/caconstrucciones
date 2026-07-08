@@ -332,6 +332,17 @@ function buildSceneMaterials(sceneId, materials) {
   return out.length ? out : (sceneId === 'ranurada' ? FALLBACK_MATS_RANURADA : FALLBACK_MATS_FRONTAL);
 }
 
+async function preloadMaterialImages(materials) {
+  await Promise.all((materials || []).map(async (mat) => {
+    if (!mat.photo) return;
+    try {
+      mat.photoImage = await cargarImagen(mat.photo);
+    } catch {
+      mat.photoImage = null;
+    }
+  }));
+}
+
 async function loadMaterialsFromApi() {
   try {
     const res = await fetch('/api/materials', { method: 'GET' });
@@ -572,6 +583,14 @@ function generarTextura(gen, baseHex){
 function lienzoMaterial(esc, mat){
   const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
   const c = t.getContext('2d');
+  if (mat.photoImage) {
+    const pattern = c.createPattern(mat.photoImage, 'repeat');
+    if (pattern) {
+      c.fillStyle = pattern;
+      c.fillRect(0, 0, esc.W, esc.H);
+      return t;
+    }
+  }
   if (mat.tipo === 'textura'){
     c.fillStyle = c.createPattern(generarTextura(mat.gen, mat.hex), 'repeat');
     c.fillRect(0, 0, esc.W, esc.H);
@@ -731,7 +750,22 @@ function chipMaterial(mat){
   const chip = document.createElement('canvas');
   chip.width = 64; chip.height = 44;
   const c = chip.getContext('2d');
-  if (mat.tipo === 'textura'){
+  if (mat.photoImage) {
+    c.drawImage(mat.photoImage, 0, 0, mat.photoImage.naturalWidth || 64, mat.photoImage.naturalHeight || 44, 0, 0, 64, 44);
+  } else if (mat.photo) {
+    const img = new Image();
+    img.onload = () => {
+      c.clearRect(0, 0, 64, 44);
+      c.drawImage(img, 0, 0, img.naturalWidth || 64, img.naturalHeight || 44, 0, 0, 64, 44);
+      const grImg = c.createLinearGradient(0, 0, 64, 44);
+      grImg.addColorStop(0, 'rgba(255,255,255,.16)');
+      grImg.addColorStop(.55, 'rgba(255,255,255,0)');
+      grImg.addColorStop(1, 'rgba(0,0,0,.22)');
+      c.fillStyle = grImg;
+      c.fillRect(0, 0, 64, 44);
+    };
+    img.src = mat.photo;
+  } else if (mat.tipo === 'textura'){
     c.drawImage(generarTextura(mat.gen, mat.hex), 0, 0, 200, 140, 0, 0, 64, 44);
   } else {
     c.fillStyle = mat.hex; c.fillRect(0, 0, 64, 44);
@@ -798,6 +832,7 @@ function avisar(msj){
   const dbMaterials = await loadMaterialsFromApi();
   ESCENAS[0].materiales = buildSceneMaterials('frontal', dbMaterials);
   ESCENAS[1].materiales = buildSceneMaterials('ranurada', dbMaterials);
+  await preloadMaterialImages(ESCENAS.flatMap((esc) => esc.materiales));
   await Promise.all(ESCENAS.map(prepararEscena));
   updateCompareStatus();
   pintarEscena(ESCENAS[0], caras[0]);
