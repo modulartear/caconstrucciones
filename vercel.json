@@ -4,6 +4,10 @@
   "outputDirectory": "frontend",
   "routes": [
     {
+      "src": "/api/firestore-([a-zA-Z0-9_-]+)",
+      "dest": "/api/firestore?collection=$1"
+    },
+    {
       "src": "/api/templates",
       "dest": "/api/visualizador?action=templates"
     },
