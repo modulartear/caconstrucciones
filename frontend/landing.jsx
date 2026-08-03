@@ -513,13 +513,28 @@ function Contacto({ onSubmitToast }) {
     if (!form.client.trim() || !form.email.trim()) return;
     setSubmitting(true);
     try {
+      const today = new Date();
       const newB = {
         id: window.CAStore.uid('pres'),
-        ...form,
+        client: form.client || '',
+        email: form.email || '',
+        phone: form.phone || '',
+        type: form.type || 'Obra nueva',
         surface: parseInt(form.surface) || 0,
+        message: form.message || '',
+        locality: form.locality || '',
         status: 'nuevo',
-        date: new Date().toISOString().slice(0, 10),
+        date: today.toISOString().slice(0, 10),
         source: 'landing-contacto',
+        clientId: null,
+        sessionId: null,
+        visualizerImage: null,
+        visualizerOriginalImage: null,
+        visualizerScene: null,
+        visualizerTarget: null,
+        visualizerMaterialId: null,
+        visualizerMaterialName: null,
+        visualizerMaterialPhoto: null,
       };
       await window.CAStore.saveItem('budgets', newB);
       setForm({ client: '', email: '', phone: '', type: 'Obra nueva', surface: '', message: '' });
