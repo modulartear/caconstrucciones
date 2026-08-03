@@ -508,24 +508,28 @@ function Contacto({ onSubmitToast }) {
   const [form, setForm] = useState({ client: '', email: '', phone: '', type: 'Obra nueva', surface: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     if (!form.client.trim() || !form.email.trim()) return;
     setSubmitting(true);
-    const budgets = window.CAStore.get('budgets');
-    const newB = {
-      id: window.CAStore.uid('pres'),
-      ...form,
-      surface: parseInt(form.surface) || 0,
-      status: 'nuevo',
-      date: new Date().toISOString().slice(0, 10),
-    };
-    window.CAStore.set('budgets', [newB, ...budgets]);
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      const newB = {
+        id: window.CAStore.uid('pres'),
+        ...form,
+        surface: parseInt(form.surface) || 0,
+        status: 'nuevo',
+        date: new Date().toISOString().slice(0, 10),
+        source: 'landing-contacto',
+      };
+      await window.CAStore.saveItem('budgets', newB);
       setForm({ client: '', email: '', phone: '', type: 'Obra nueva', surface: '', message: '' });
       onSubmitToast('Recibimos tu solicitud. Te contactamos en menos de 24 hs.');
-    }, 600);
+    } catch (err) {
+      console.error('Error enviando presupuesto:', err);
+      onSubmitToast('Ocurrió un error al enviar. Por favor reintentalo en unos segundos.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

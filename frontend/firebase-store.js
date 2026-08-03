@@ -63,7 +63,7 @@
   async function saveItem(name, item) {
     try {
       const endpoint = API_ENDPOINTS[name];
-      if (!endpoint) return;
+      if (!endpoint) throw new Error(`No endpoint for ${name}`);
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -83,27 +83,45 @@
         await save(name, items);
         return saved;
       }
+
+      let msg = `Error ${res.status} guardando ${name}`;
+      try {
+        const errData = await res.json();
+        if (errData && errData.error) msg = errData.error;
+      } catch (_) {}
+      throw new Error(msg);
     } catch (e) {
       console.error(`Error saving ${name}:`, e);
+      throw e;
     }
   }
 
   async function deleteItem(name, id) {
     try {
       const endpoint = API_ENDPOINTS[name];
-      if (!endpoint) return;
+      if (!endpoint) throw new Error(`No endpoint for ${name}`);
 
-      await fetch(endpoint, {
+      const res = await fetch(endpoint, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id }),
       });
+
+      if (!res.ok) {
+        let msg = `Error ${res.status} eliminando ${name}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) msg = errData.error;
+        } catch (_) {}
+        throw new Error(msg);
+      }
 
       const items = load(name);
       const filtered = items.filter(i => i.id !== id);
       await save(name, filtered);
     } catch (e) {
       console.error(`Error deleting ${name}:`, e);
+      throw e;
     }
   }
 
