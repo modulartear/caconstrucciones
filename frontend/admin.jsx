@@ -444,18 +444,34 @@ const MAT_TEXTURES = [
   { k: 'stone', l: 'Piedra' },
   { k: 'paint', l: 'Pintura' },
 ];
-const MAT_CATEGORIES = ['Pisos', 'Revestimientos', 'Maderas', 'Pinturas', 'Sanitarios', 'Griferías', 'Iluminación', 'Otros'];
+const FALLBACK_CATEGORIES = ['Pisos', 'Revestimientos', 'Maderas', 'Pinturas', 'Sanitarios', 'Griferías', 'Iluminación', 'Otros'];
 
 function MaterialesPage({ toast }) {
   const materials = useStoreVal('materials');
+  const categories = useStoreVal('categories');
+  const brands = useStoreVal('brands');
   const [editing, setEditing] = useState(null);
   const [delTarget, setDelTarget] = useState(null);
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('Todos');
+  const [brandFilter, setBrandFilter] = useState('Todas');
+
+  const categoryNames = [...new Set([
+    ...FALLBACK_CATEGORIES,
+    ...categories.map(c => c.name).filter(Boolean),
+    ...materials.map(m => m.category).filter(Boolean)
+  ])];
+  const brandMap = Object.fromEntries((brands || []).map(b => [b.id, b]));
 
   const filtered = materials.filter((m) =>
     (catFilter === 'Todos' || m.category === catFilter) &&
-    (m.name.toLowerCase().includes(search.toLowerCase()) || m.category.toLowerCase().includes(search.toLowerCase()))
+    (brandFilter === 'Todas' || m.brand === brandFilter) &&
+    (
+      m.name?.toLowerCase().includes(search.toLowerCase()) ||
+      m.category?.toLowerCase().includes(search.toLowerCase()) ||
+      (brandMap[m.brand]?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+      m.description?.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   const save = async (mat) => {
@@ -478,6 +494,8 @@ function MaterialesPage({ toast }) {
       <div className="page-head">
         <div><h1>Materiales</h1><p>Catálogo público disponible en la landing y en el probador IA.</p></div>
         <div className="actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => location.hash = 'categorias'}>Categorías</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => location.hash = 'marcas'}>Marcas</button>
           <button className="btn btn-primary btn-sm" onClick={() => setEditing({})}>+ Nuevo material</button>
         </div>
       </div>
@@ -488,7 +506,11 @@ function MaterialesPage({ toast }) {
             <input placeholder="Buscar material…" value={search} onChange={(e) => setSearch(e.target.value)} />
             <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} style={{ width: 180 }}>
               <option>Todos</option>
-              {MAT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+              {categoryNames.map((c) => <option key={c}>{c}</option>)}
+            </select>
+            <select value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} style={{ width: 180 }}>
+              <option>Todas</option>
+              {(brands || []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </select>
           </div>
           <span className="chip">{filtered.length} ítems</span>
@@ -497,7 +519,7 @@ function MaterialesPage({ toast }) {
           <div className="empty-state">No hay materiales con esos filtros.</div>
         ) : (
           <table className="tbl">
-            <thead><tr><th>Material</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Material</th><th>Categoría</th><th>Marca</th><th>Precio</th><th>Stock</th><th>Acciones</th></tr></thead>
             <tbody>
               {filtered.map((m) => (
                 <tr
@@ -522,6 +544,16 @@ function MaterialesPage({ toast }) {
                     </div>
                   </td>
                   <td><span className="chip">{m.category}</span></td>
+                  <td>{brandMap[m.brand] ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {brandMap[m.brand].logo ? (
+                        <img src={brandMap[m.brand].logo} alt="" style={{ width: 28, height: 28, objectFit: 'contain', borderRadius: 6, background: 'var(--surface-2)', border: '1px solid var(--border)' }} />
+                      ) : null}
+                      <span>{brandMap[m.brand].name}</span>
+                    </div>
+                  ) : (
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>—</span>
+                  )}</td>
                   <td><b>${m.price?.toLocaleString('es-AR')}</b> <span style={{ color: 'var(--muted)' }}>/{m.unit}</span></td>
                   <td>{m.stock}</td>
                   <td className="actions">
@@ -564,9 +596,25 @@ function MaterialesPage({ toast }) {
 }
 
 function MaterialForm({ initial, onClose, onSave }) {
+  const categories = useStoreVal('categories');
+  const brands = useStoreVal('brands');
+  const categoryNames = [...new Set([
+    ...FALLBACK_CATEGORIES,
+    ...categories.map(c => c.name).filter(Boolean),
+    ...(initial?.category ? [initial.category] : [])
+  ])];
   const [m, setM] = useState({
-    name: '', category: 'Pisos', color: '#e8e4dd', accent: '#9aa0a8',
-    price: 0, unit: 'm²', description: '', stock: 0, photo: null, texture: 'marble',
+    name: '',
+    category: categoryNames[0] || 'Otros',
+    color: '#e8e4dd',
+    accent: '#9aa0a8',
+    price: 0,
+    unit: 'm²',
+    description: '',
+    stock: 0,
+    photo: null,
+    texture: 'marble',
+    brand: null,
     ...initial,
   });
   const previewRef = useRef(null);
@@ -594,8 +642,15 @@ function MaterialForm({ initial, onClose, onSave }) {
         </div>
         <div>
           <label>Categoría</label>
-          <select value={m.category} onChange={(e) => setM({ ...m, category: e.target.value })}>
-            {MAT_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+          <select value={m.category || ''} onChange={(e) => setM({ ...m, category: e.target.value })}>
+            {categoryNames.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label>Marca</label>
+          <select value={m.brand || ''} onChange={(e) => setM({ ...m, brand: e.target.value || null })}>
+            <option value="">Sin marca</option>
+            {(brands || []).map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         </div>
         <div>
@@ -1281,6 +1336,7 @@ const PAGES = [
   { id: 'clientes', label: 'Clientes', icon: 'M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M8.5 7.5a4 4 0 1 1-8 0 4 4 0 0 1 8 0' },
   { id: 'usuarios', label: 'Usuarios', icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75 M9 12a3 3 0 1 1 0-6 3 3 0 0 1 0 6z' },
   { id: 'testimonios', label: 'Testimonios', icon: 'M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z' },
+  { id: 'categorias', label: 'Categorías', icon: 'M4 6h16 M4 12h16 M4 18h16' },
   { id: 'marcas', label: 'Marcas', icon: 'M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z M7 7h.01' },
   { id: 'config', label: 'Configuración', icon: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z' },
 ];
@@ -1400,6 +1456,42 @@ function App() {
               { key: 'name', label: 'Cliente', render: (t) => <><b>{t.name}</b><div style={{ color: 'var(--muted)', fontSize: 12 }}>{t.role}</div></> },
               { key: 'stars', label: 'Stars', render: (t) => '★'.repeat(t.stars) },
               { key: 'text', label: 'Texto', render: (t) => <span style={{ color: 'var(--muted)', fontSize: 12 }}>{t.text?.slice(0, 80)}…</span> },
+            ]}
+          />
+        )}
+        {page === 'categorias' && (
+          <SimpleCRUD
+            title="Categorías"
+            sub="Agrupaciones para organizar el catálogo de materiales."
+            storeKey="categories"
+            toast={showToast}
+            fields={[
+              { key: 'name', label: 'Nombre de la categoría', full: true, placeholder: 'Ej: Revestimientos' },
+              { key: 'description', label: 'Descripción (opcional)', type: 'textarea', full: true },
+              { key: 'order', label: 'Orden', type: 'number', default: 0, placeholder: '0' },
+              { key: 'color', label: 'Color (opcional)', placeholder: '#ffffff' },
+            ]}
+            displayCols={[
+              {
+                key: 'name',
+                label: 'Categoría',
+                render: (c) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 8,
+                      background: c.color || 'var(--surface-2)',
+                      border: '1px solid var(--border)',
+                    }}
+                  />
+                    <b style={{ fontFamily: 'var(--font-display)', fontSize: 16 }}>{c.name}</b>
+                  </div>
+                )
+              },
+              { key: 'description', label: 'Descripción', render: (c) => <span style={{ color: 'var(--muted)', fontSize: 12 }}>{c.description || '—'}</span> },
+              { key: 'order', label: 'Orden', render: (c) => <span style={{ color: 'var(--muted)', fontSize: 12 }}>{c.order || 0}</span> },
             ]}
           />
         )}
