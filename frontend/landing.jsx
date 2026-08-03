@@ -619,16 +619,35 @@ function Contacto({ onSubmitToast }) {
 
 // ───────────────────────── Footer ─────────────────────────
 function Footer({ site }) {
+  const fullLogo = site.logo_full || site.logoFull || null;
+  const logoSrc = fullLogo || site.logo || 'assets/ca-logo.png';
   return (
     <footer>
       <div className="container footer-inner">
         <div>
-          <BrandMark site={site} />
+          <a href="#top" className="footer-brand" aria-label="CA Construcciones · inicio">
+            <img
+              className="footer-logo"
+              src={logoSrc}
+              alt="CA construcciones · soluciones integrales"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = 'assets/logo.jpg';
+              }}
+            />
+          </a>
           <div className="footer-credits" style={{ marginTop: 14 }}>
             © {new Date().getFullYear()} CA Construcciones · Todos los derechos reservados
           </div>
           <div className="footer-madeby" style={{ marginTop: 10 }}>
-            Hecho con orgullo en Venado Tuerto por DiseArte
+            Hecho con orgullo en Venado Tuerto por{' '}
+            <a
+              href="http://disearte.vercel.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="madeby-link"
+              title="DiseArte · Diseño y tecnología"
+            >DiseArte</a>
           </div>
         </div>
         <div className="footer-links">
@@ -662,6 +681,319 @@ function WhatsAppButton({ site }) {
       </svg>
     </a>
   );
+}
+
+// ───────────────────────── Lumi · Chatbot CA ─────────────────────────
+function buildLumiContext({ site, materials, brands, projects, testimonials }) {
+  const parts = [];
+  parts.push('== EMPRESA CA CONSTRUCCIONES ==');
+  parts.push(`Nombre: CA Construcciones · Soluciones Integrales.`);
+  parts.push(`Ubicación: Venado Tuerto, Santa Fe, Argentina.`);
+  if (site?.contact?.phone) parts.push(`Teléfono: ${site.contact.phone}.`);
+  if (site?.contact?.whatsapp) parts.push(`WhatsApp: ${site.contact.whatsapp}.`);
+  if (site?.contact?.email) parts.push(`Email: ${site.contact.email}.`);
+  if (site?.contact?.address) parts.push(`Dirección: ${site.contact.address}.`);
+  if (site?.hero_title) parts.push(`Propuesta principal: ${site.hero_title}${site.hero_sub ? ' — ' + site.hero_sub : ''}.`);
+  if (site?.stats?.length) parts.push(`Stats principales: ${site.stats.map(s => `${s.label}=${s.value}`).join(', ')}.`);
+  parts.push('Horarios de atención habitual: Lunes a Viernes de 8 a 18 hs, Sábados de 9 a 13 hs.');
+  parts.push('Pedidos de presupuesto: se toman por formulario de Contacto en la pagina y por WhatsApp.');
+  parts.push('Visualizador de materiales: disponible en la seccion Visualizador / Probador para probar texturas en paredes y pisos.');
+
+  parts.push('\n== SERVICIOS PRINCIPALES ==');
+  parts.push('Construccion integral, remodelaciones, obras nuevas, revestimientos, pisos, sanitarios, griferias, pintura, iluminacion, asesoramiento de diseño, presupuesto a medida.');
+
+  if (Array.isArray(brands) && brands.length) {
+    parts.push('\n== MARCAS TRABAJADAS ==');
+    parts.push(brands.slice(0, 40).map(b => `• ${b.name || b.id}`).join(', '));
+  }
+
+  if (Array.isArray(materials) && materials.length) {
+    parts.push('\n== MATERIALES EN CATALOGO ==');
+    parts.push(`Total: ${materials.length} materiales.`);
+    const cats = [...new Set(materials.map(m => m.category).filter(Boolean))];
+    if (cats.length) parts.push(`Categorias: ${cats.join(', ')}.`);
+    parts.push('Listado (resumido):');
+    materials.slice(0, 80).forEach(m => {
+      const brand = m.brand
+        ? (brands?.find(b => b.id === m.brand)?.name || '')
+        : '';
+      parts.push(`- ${m.name}${m.category ? ' [' + m.category + ']' : ''}${brand ? ' (' + brand + ')' : ''}${m.price ? ' $' + m.price + '/' + (m.unit || 'u') : ''}${m.stock != null ? ' stock=' + m.stock : ''}`);
+    });
+  }
+
+  if (Array.isArray(projects) && projects.length) {
+    parts.push('\n== OBRAS / PROYECTOS DESTACADOS ==');
+    projects.slice(0, 30).forEach(p => {
+      parts.push(`• ${p.title || p.name}${p.category ? ' [' + p.category + ']' : ''}${p.location || p.locality ? ' en ' + (p.location || p.locality) : ''}${p.description ? ' - ' + String(p.description).slice(0, 120) : ''}`);
+    });
+  }
+
+  if (Array.isArray(testimonials) && testimonials.length) {
+    parts.push('\n== TESTIMONIOS DE CLIENTES ==');
+    testimonials.slice(0, 12).forEach(t => {
+      parts.push(`- ${t.name || t.author || 'Cliente'}: ${String(t.quote || t.message || t.text || '').slice(0, 160)}`);
+    });
+  }
+
+  parts.push('\n== PREGUNTAS FRECUENTES ==');
+  parts.push('¿Hacen envios? Si, a Venado Tuerto y zona. Coordinar por WhatsApp.');
+  parts.push('¿Aceptan tarjeta / transferencia? Consultar condiciones al contacto oficial.');
+  parts.push('¿Tienen local? Si, la direccion figura en la seccion Contacto.');
+
+  return parts.join('\n');
+}
+
+function fallbackLumiAnswer(question, { site, materials, brands, projects }) {
+  const q = String(question || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  if (/^(hola|buen|hey|hi|que tal|holis|buenos dias|buenas tardes|buenas noches)/.test(q)) {
+    return '¡Hola! Soy Lumi, la asistente de CA Construcciones. ¿En qué te puedo ayudar hoy? Podés consultarme por materiales, obras, presupuestos, horarios o el visualizador, o pasarte directamente al WhatsApp oficial 😊.';
+  }
+  if (/(quien eres|que eres|quien sos|que hace|tu nombre|presentate)/.test(q)) {
+    return 'Soy **Lumi**, la asistente virtual de CA Construcciones (Venado Tuerto, Santa Fe). Manejo la información del sitio: catálogo de materiales, obras realizadas, marcas, contacto y pedidos de presupuesto.';
+  }
+  if (/(horario|atencion|cuando|abierto|abren|atencios|que horas)/.test(q)) {
+    return 'Atendemos de **Lunes a Viernes de 8 a 18 hs** y los **Sábados de 9 a 13 hs**. Coordiná tu visita o consulta por WhatsApp para evitar esperas 🙌.';
+  }
+  if (/(ubicacion|donde|direccion|local|venado|sucursal|lugar|esta ubicad)/.test(q)) {
+    const address = site?.contact?.address;
+    return address
+      ? `Estamos en **${address}**, Venado Tuerto (Santa Fe). ¡Te esperamos!`
+      : 'Somos de **Venado Tuerto, Santa Fe, Argentina**. Pasá por la sección Contacto para ver la dirección exacta, o escribinos por WhatsApp y te la pasamos al toque.';
+  }
+  if (/(whatsapp|wsp|telefono|llamar|llamada|tel|contacto|hablar|comunic|chatear|numero)/.test(q)) {
+    const c = site?.contact || {};
+    const wa = c.whatsapp || c.phone;
+    if (!wa) return 'Encontranos en la sección **#contacto** de la página, ahí tenemos el teléfono, WhatsApp, email y dirección.';
+    return `Podés escribirnos por WhatsApp al **${wa}** (es el canal más rápido) o llamar al ${c.phone || wa}. También dejamos tu mensaje en el formulario de Contacto y te respondemos al toque.`;
+  }
+  if (/(email|mail|correo|e-mail)/.test(q)) {
+    const email = site?.contact?.email;
+    return email
+      ? `Nuestro email de contacto es **${email}**. Para presupuestos, igual te recomendamos el formulario o WhatsApp.`
+      : 'Para consultas por email usá el formulario de **Contacto** de la página, y el equipo te responde directamente por el correo que registraste.';
+  }
+  if (/(material|categoria|que venden|catálogo|catalogo|producto|maderera|revest|piso|pintura|sanitario|griferia|cielo)/.test(q)) {
+    const cats = [...new Set((materials || []).map(m => m.category).filter(Boolean))];
+    const total = (materials || []).length;
+    let msg = `Tenemos **${total || 'varios'} materiales** en catálogo. `;
+    if (cats.length) msg += `Categorías actuales: **${cats.join(' · ')}**. `;
+    msg += 'Si querés sugerencias de materiales para un ambiente en particular decime cual (ej: "revestimiento de pared living") y te ayudo a elegir.';
+    return msg;
+  }
+  if (/(obra|proyecto|trabajo|hacen|realizan|remodel|constru|construccion)/.test(q)) {
+    const total = (projects || []).length;
+    return `Hacemos **construcción integral, obras nuevas y remodelaciones** completas (baños, cocina, ambientes). ${total ? `Ya contamos con ${total} obras documentadas en el portfolio (sección Obras). ` : ''}Pedinos presupuesto por el formulario de Contacto y pasamos a medir sin costo en Venado Tuerto y zona.`;
+  }
+  if (/(presupuesto|precio|cuanto sale|cuanto cuesta|valor|presupuest|cotiz|costo)/.test(q)) {
+    return 'Los presupuestos son **personalizados según metros, materiales y complejidad**. Pedilos de 3 maneras: 1) Formulario **Contacto** de la página 2) WhatsApp oficial 3) Acercándote al local. Siempre pedimos fotos o visita para ser precisos ✅.';
+  }
+  if (/(visualizador|probador|tester|como se ve|aplicar|material en la pared|pared|muestra|ver material)/.test(q)) {
+    return 'Tenés el **Visualizador de materiales** integrado en la página (sección Probador / Visualizador). Elegí la escena que más se parezca a tu ambiente y cambiá pisos, paredes, pinturas y texturas en tiempo real. Podés pedir presupuesto directo desde el formulario con los materiales que probaste.';
+  }
+  if (/(marca|trabajan con|proveedor|quienes|alianza)/.test(q)) {
+    const total = (brands || []).length;
+    const names = (brands || []).slice(0, 14).map(b => b.name).filter(Boolean).join(', ');
+    if (!total) return 'Trabajamos con marcas líderes del rubro. La lista se actualiza en la sección **Marcas** del sitio.';
+    return `Trabajamos con **${total} marcas** oficiales. Algunas: **${names}**. La lista completa y sus logos la tenés en la sección Marcas del sitio.`;
+  }
+  if (/(gracias|genial|perfecto|ok|chau|chao|bye|nos vemos|nada mas|no mas|no necesito)/.test(q)) {
+    return '¡De nada! Cualquier otra consulta acá estoy, o escribinos directo por WhatsApp — el equipo responde en el día. ¡Éxitos con tu proyecto! 👋';
+  }
+  return null;
+}
+
+async function askLumiAPI(question, context) {
+  try {
+    const res = await fetch('/api/lumi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, context }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (res.status === 501 || json.fallback) {
+      return { fallback: true, response: null };
+    }
+    if (!res.ok) {
+      return { fallback: true, error: json.error || `Error ${res.status}` };
+    }
+    return { fallback: false, response: json.response || null };
+  } catch (e) {
+    return { fallback: true, error: e.message };
+  }
+}
+
+function LumiChat({ site }) {
+  const materials = useStore('materials');
+  const projects = useStore('projects');
+  const brands = useStore('brands');
+  const testimonials = useStore('testimonials');
+
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState('');
+  const [typing, setTyping] = useState(false);
+  const [messages, setMessages] = useState(() => {
+    const hello = [
+      {
+        id: 'm0',
+        role: 'bot',
+        html: `¡Hola! Soy <b>Lumi</b> ✨, la asistente de <b>CA Construcciones</b>. Consultame por materiales, obras, presupuestos, horarios o usá el visualizador. ¡También te paso el WhatsApp de inmediato!`,
+      },
+    ];
+    try {
+      const raw = localStorage.getItem('lumi-msgs-v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return hello;
+  });
+
+  const scrollRef = useRef(null);
+  useEffect(() => {
+    try { localStorage.setItem('lumi-msgs-v1', JSON.stringify(messages.slice(-80))); } catch (_) {}
+  }, [messages]);
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, typing, open]);
+
+  const addMsg = (role, text, opts = {}) => {
+    setMessages((m) => [...m, { id: 'm' + Math.random().toString(36).slice(2, 9), role, text, html: opts.html ?? null, ...(opts.meta ? { meta: opts.meta } : {}) }]);
+  };
+
+  const send = async (rawText) => {
+    const text = String(rawText || input || '').trim();
+    if (!text) return;
+    setInput('');
+    addMsg('user', text);
+    setTyping(true);
+
+    const context = buildLumiContext({ site, materials, brands, projects, testimonials });
+
+    let final = null;
+    let meta = null;
+
+    const local = fallbackLumiAnswer(text, { site, materials, brands, projects });
+    if (local) {
+      final = local;
+      meta = { engine: 'local' };
+    } else {
+      const { response, fallback, error } = await askLumiAPI(text, context);
+      if (fallback || !response) {
+        final = error && !/^(hola|buen)/.test(text.toLowerCase())
+          ? 'Mmm, no tengo esa información exacta en el sitio. Pasate por **#contacto** o escribinos por WhatsApp y el equipo te responde al toque con todo detalle.'
+          : 'Consultame sobre materiales, obras, presupuestos, horarios, marcas o contactos, que tengo toda la info de CA Construcciones lista para ayudarte.';
+        meta = { engine: 'local-fallback' };
+      } else {
+        final = response;
+        meta = { engine: 'ai' };
+      }
+    }
+
+    setTyping(false);
+    if (final) addMsg('bot', final, { meta });
+  };
+
+  const quick = [
+    { label: '¿Qué materiales tienen?', text: 'Que materiales tienen y en que categorias' },
+    { label: 'Horarios', text: 'Cuales son los horarios de atencion' },
+    { label: 'Ubicación', text: 'Donde estan ubicados' },
+    { label: 'Presupuesto', text: 'Como pido un presupuesto para mi obra' },
+  ];
+
+  return (
+    <>
+      <button
+        type="button"
+        className={`lumi-fab ${open ? 'is-open' : ''}`}
+        onClick={() => setOpen(v => !v)}
+        aria-label="Abrir Lumi asistente CA"
+        title="Lumi · Asistente CA Construcciones"
+      >
+        {open ? (
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        ) : (
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a4 4 0 0 1 4 4v1a6 6 0 0 1 4 5.92V14a1 1 0 0 1-1 1h-1a3 3 0 0 1-6 0H7a1 1 0 0 1-1-1v-1.08A6 6 0 0 1 9 7V6a4 4 0 0 1 3-3.87"/>
+            <circle cx="10" cy="8" r="1.1" fill="currentColor" stroke="none"/>
+            <circle cx="14" cy="8" r="1.1" fill="currentColor" stroke="none"/>
+            <path d="M9.5 11c.8 1 1.6 1.4 2.5 1.4S13.7 12 14.5 11" fill="none"/>
+            <path d="M7 21h10M9 17v4M15 17v4"/>
+          </svg>
+        )}
+        {!open && <span className="lumi-fab-pulse" aria-hidden="true" />}
+      </button>
+
+      <div className={`lumi-modal ${open ? 'is-open' : ''}`} role="dialog" aria-label="Lumi · Asistente virtual">
+        <div className="lumi-head">
+          <div className="lumi-head-brand">
+            <div className="lumi-avatar" aria-hidden="true">
+              <span>L</span>
+            </div>
+            <div>
+              <div className="lumi-title">Lumi · Asistente CA</div>
+              <div className="lumi-sub">Resp. en el día · Info de la página</div>
+            </div>
+          </div>
+          <button type="button" className="lumi-close" onClick={() => setOpen(false)} aria-label="Cerrar chat">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+
+        <div className="lumi-msgs" ref={scrollRef}>
+          {messages.map((m) => (
+            <div key={m.id} className={`lumi-msg lumi-${m.role}`}>
+              <div className="lumi-bubble" dangerouslySetInnerHTML={{ __html: m.html ?? escapeHtml(m.text || '') }} />
+              {m.meta?.engine === 'ai' && <div className="lumi-meta">· IA con contexto del sitio</div>}
+              {m.meta?.engine?.startsWith('local') && <div className="lumi-meta">· Respuesta rápida</div>}
+            </div>
+          ))}
+          {typing && (
+            <div className="lumi-msg lumi-bot">
+              <div className="lumi-bubble lumi-typing">
+                <span/><span/><span/>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="lumi-quick">
+          {quick.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              className="lumi-chip"
+              onClick={() => send(q.text)}
+            >{q.label}</button>
+          ))}
+        </div>
+
+        <form
+          className="lumi-input"
+          onSubmit={(e) => { e.preventDefault(); send(); }}
+        >
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Preguntá a Lumi sobre materiales, obras, presupuestos…"
+            aria-label="Pregunta para Lumi"
+            disabled={typing}
+          />
+          <button type="submit" className="lumi-send" aria-label="Enviar pregunta" disabled={typing || !input.trim()}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
 // ───────────────────────── Login Modal ─────────────────────────
@@ -759,6 +1091,7 @@ function App() {
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onSuccess={() => { window.location.href = 'admin.html'; }} />}
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       <WhatsAppButton site={site} />
+      <LumiChat site={site} />
     </>
   );
 }
