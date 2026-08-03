@@ -446,6 +446,20 @@ const MAT_TEXTURES = [
 ];
 const FALLBACK_CATEGORIES = ['Pisos', 'Revestimientos', 'Maderas', 'Pinturas', 'Sanitarios', 'Griferías', 'Iluminación', 'Otros'];
 
+function buildCategoryList(categories, materials) {
+  const fromCollection = Array.isArray(categories)
+    ? [...categories]
+        .sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.name || '').localeCompare(String(b.name || '')))
+        .map(c => c.name)
+        .filter(Boolean)
+    : [];
+  const used = Array.isArray(materials)
+    ? materials.map(m => m.category).filter(Boolean)
+    : [];
+  const base = fromCollection.length > 0 ? fromCollection : FALLBACK_CATEGORIES;
+  return [...new Set([...base, ...used])];
+}
+
 function MaterialesPage({ toast }) {
   const materials = useStoreVal('materials');
   const categories = useStoreVal('categories');
@@ -456,11 +470,7 @@ function MaterialesPage({ toast }) {
   const [catFilter, setCatFilter] = useState('Todos');
   const [brandFilter, setBrandFilter] = useState('Todas');
 
-  const categoryNames = [...new Set([
-    ...FALLBACK_CATEGORIES,
-    ...categories.map(c => c.name).filter(Boolean),
-    ...materials.map(m => m.category).filter(Boolean)
-  ])];
+  const categoryNames = buildCategoryList(categories, materials);
   const brandMap = Object.fromEntries((brands || []).map(b => [b.id, b]));
 
   const filtered = materials.filter((m) =>
@@ -598,14 +608,11 @@ function MaterialesPage({ toast }) {
 function MaterialForm({ initial, onClose, onSave }) {
   const categories = useStoreVal('categories');
   const brands = useStoreVal('brands');
-  const categoryNames = [...new Set([
-    ...FALLBACK_CATEGORIES,
-    ...categories.map(c => c.name).filter(Boolean),
-    ...(initial?.category ? [initial.category] : [])
-  ])];
+  const allMaterials = useStoreVal('materials');
+  const categoryNames = buildCategoryList(categories, allMaterials);
   const [m, setM] = useState({
     name: '',
-    category: categoryNames[0] || 'Otros',
+    category: categoryNames[0] || (initial?.category) || 'Otros',
     color: '#e8e4dd',
     accent: '#9aa0a8',
     price: 0,
