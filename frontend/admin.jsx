@@ -27,6 +27,18 @@ async function loginWithAPI(username, password) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', username, password })
     });
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      const text = await response.text();
+      const snippet = text.slice(0, 200);
+      console.error('Respuesta no-JSON del servidor:', snippet);
+      return {
+        success: false,
+        error: 'El servidor respondió con un error inesperado. Verificá que las variables de entorno (FIREBASE_SERVICE_ACCOUNT) estén configuradas en Vercel. Respuesta: ' + snippet
+      };
+    }
+
     const data = await response.json();
     if (response.ok && data.token) {
       return { success: true };
