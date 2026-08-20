@@ -1,47 +1,4 @@
-import admin from 'firebase-admin';
-import dotenv from 'dotenv';
-import fs from 'node:fs';
-
-dotenv.config({ path: './backend/.env' });
-
-let db = null;
-let initError = null;
-
-function readServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!raw) return null;
-
-  const value = raw.trim();
-  if (value.startsWith('{')) {
-    try { return JSON.parse(value); } catch (_) { return null; }
-  }
-
-  try {
-    if (fs.existsSync(value)) {
-      return JSON.parse(fs.readFileSync(value, 'utf8'));
-    }
-  } catch (_) {}
-
-  try { return JSON.parse(value); } catch (_) { return null; }
-}
-
-try {
-  const serviceAccount = readServiceAccount();
-  if (serviceAccount) {
-    if (!admin.apps.length) {
-      const appConfig = { credential: admin.credential.cert(serviceAccount) };
-      if (process.env.FIREBASE_DATABASE_URL) appConfig.databaseURL = process.env.FIREBASE_DATABASE_URL;
-      admin.initializeApp(appConfig);
-    }
-    db = admin.firestore();
-  } else {
-    initError = 'Firebase Service Account no configurado. Define FIREBASE_SERVICE_ACCOUNT en las variables de entorno.';
-    console.error('FIREBASE INIT ERROR:', initError);
-  }
-} catch (e) {
-  initError = e.message || String(e);
-  console.error('Firebase init error:', e);
-}
+import { db, initError } from '../lib/firestore-common.js';
 
 export default async function handler(req, res) {
   console.log('✅ API Auth function started');
@@ -61,7 +18,8 @@ export default async function handler(req, res) {
   try {
     if (!db) {
       return res.status(500).json({
-        error: 'Servidor no inicializado. ' + (initError || 'Contacta al administrador.')
+        error: 'Servidor no inicializado. ' +
+          (initError || 'Define FIREBASE_SERVICE_ACCOUNT en Vercel Environment Variables.')
       });
     }
 

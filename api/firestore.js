@@ -1,33 +1,5 @@
 import { collectionHandlers } from '../lib/firestore-common.js';
-import admin from 'firebase-admin';
-import dotenv from 'dotenv';
-import fs from 'node:fs';
-
-dotenv.config({ path: './backend/.env' });
-
-const serviceAccount = readServiceAccount();
-if (!admin.apps.length && serviceAccount) {
-  const appConfig = {
-    credential: admin.credential.cert(serviceAccount),
-  };
-  if (process.env.FIREBASE_DATABASE_URL) appConfig.databaseURL = process.env.FIREBASE_DATABASE_URL;
-  admin.initializeApp(appConfig);
-}
-const db = admin.apps.length ? admin.firestore() : null;
-
-function readServiceAccount() {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT || process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!raw) return null;
-
-  const value = raw.trim();
-  if (value.startsWith('{')) return JSON.parse(value);
-
-  if (fs.existsSync(value)) {
-    return JSON.parse(fs.readFileSync(value, 'utf8'));
-  }
-
-  return JSON.parse(value);
-}
+import { db, initError } from '../lib/firestore-common.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -37,6 +9,13 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
+  }
+
+  if (!db) {
+    return res.status(500).json({
+      error: 'Firestore no inicializado. ' +
+        (initError || 'Define FIREBASE_SERVICE_ACCOUNT en Vercel Environment Variables.')
+    });
   }
 
   try {
