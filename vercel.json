@@ -2,6 +2,19 @@
   "version": 2,
   "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" != \"main\" ]; then echo \"Skipping non-main deployment\"; exit 0; else exit 1; fi",
   "outputDirectory": "frontend",
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS,PATCH" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization,X-Requested-With,Accept,Origin" },
+        { "key": "Access-Control-Max-Age", "value": "86400" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    }
+  ],
   "routes": [
     {
       "src": "/api/firestore-([a-zA-Z0-9_-]+)",

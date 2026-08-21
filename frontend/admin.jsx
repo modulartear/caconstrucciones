@@ -21,8 +21,9 @@ function logout() {
   window.location.href = 'index.html';
 }
 async function loginWithAPI(username, password) {
+  const url = `${window.location.origin}/api/auth`;
   try {
-    const response = await fetch('/api/auth', {
+    const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'login', username, password })
@@ -45,7 +46,17 @@ async function loginWithAPI(username, password) {
     }
     return { success: false, error: data.error || 'Login failed' };
   } catch (error) {
-    return { success: false, error: error.message };
+    const msg = (error && error.message) ? error.message : String(error);
+    let hint = '';
+    if (/Failed to fetch|NetworkError|CORS|Network request failed/i.test(msg)) {
+      hint = ' — Posibles causas: ' +
+        '(1) DNS del dominio aún no propagó completamente → esperá 5 minutos y refrescá; ' +
+        '(2) Dominio dice "Invalid Configuration" en Vercel → corregí los registros A (@ → 76.76.21.21) y CNAME (www → cname.vercel-dns.com); ' +
+        '(3) Hay un redirect HTTP↔HTTPS o www↔sin-www que se traba el preflight OPTIONS → abrí la página con el dominio que tenga ✅ Valid en Vercel; ' +
+        '(4) La function /api/auth crasheó antes de mandar headers → mirá los logs en Vercel → Deployments → Functions → api/auth.';
+    }
+    console.error('loginWithAPI error origen:', url, 'msg:', msg);
+    return { success: false, error: msg + hint };
   }
 }
 
