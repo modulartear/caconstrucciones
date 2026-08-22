@@ -456,6 +456,107 @@ function DashboardPage({ go }) {
   );
 }
 
+// ─── Catalogo WhatsApp helpers ──────────────────────────────────────────────
+function csvEscape(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  if (/[",\n\r]/.test(s)) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function hexForUrl(color) {
+  if (!color) return 'e8e4dd';
+  return String(color).replace('#', '').trim() || 'e8e4dd';
+}
+
+function buildWhatsAppCSV(materials, brands, siteUrl, currency = 'ARS') {
+  const brandById = Object.fromEntries((brands || []).map(b => [b.id, b]));
+  const cols = [
+    'id', 'name', 'description', 'availability', 'price', 'currency',
+    'brand', 'category', 'image_url', 'condition', 'product_type', 'url'
+  ];
+  const rows = [cols.join(',')];
+  for (const m of materials || []) {
+    const id = csvEscape(m.id || ('m_' + Math.random().toString(36).slice(2, 9)));
+    const name = csvEscape(m.name || 'Material sin nombre');
+    const description = csvEscape(
+      (m.description && m.description.trim())
+        ? String(m.description).slice(0, 4000)
+        : (m.name || 'Material de construcción.')
+    );
+    const stock = +m.stock || 0;
+    const availability = csvEscape(stock > 0 ? 'in stock' : 'out of stock');
+    const price = csvEscape(Number(m.price || 0).toFixed(2));
+    const cur = csvEscape(currency);
+    const brand = csvEscape(brandById[m.brand]?.name || '');
+    const category = csvEscape(m.category || 'Otros');
+    let imageUrl = '';
+    if (m.photo && /^https?:\/\//i.test(m.photo)) {
+      imageUrl = m.photo;
+    } else {
+      const bg = hexForUrl(m.color);
+      const fg = hexForUrl(m.accent);
+      imageUrl = 'https://placehold.co/800x800/' + bg + '/' + fg + '?text=' +
+        encodeURIComponent(m.name ? m.name.slice(0, 40) : 'Material');
+    }
+    const image = csvEscape(imageUrl);
+    const condition = csvEscape('new');
+    const productType = csvEscape('Materiales / ' + (m.category || 'Otros'));
+    const url = csvEscape(siteUrl || '');
+    rows.push([id, name, description, availability, price, cur, brand, category, image, condition, productType, url].join(','));
+  }
+  const csv = rows.join('\r\n');
+  return '\uFEFF' + csv;
+}
+
+function downloadCSVFile(csvContent, filename) {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildShareMaterialText(m, brandObj, siteUrl) {
+  const lines = [];
+  lines.push('🛒 *' + (m.name || 'Material') + '*');
+  if (m.category) lines.push('🏷️ Categoría: ' + m.category);
+  if (brandObj?.name) lines.push('🏭 Marca: ' + brandObj.name);
+  const price = +m.price || 0;
+  if (price > 0) {
+    try { lines.push('💰 Precio: $' + price.toLocaleString('es-AR') + (m.unit ? ' / ' + m.unit : '')); }
+    catch (_) { lines.push('💰 Precio: $' + price + (m.unit ? ' / ' + m.unit : '')); }
+  }
+  if (typeof m.stock !== 'undefined' && m.stock !== null) {
+    lines.push('📦 Stock: ' + m.stock + (m.unit ? ' ' + m.unit : ' unidades'));
+  }
+  if (m.description && m.description.trim()) {
+    lines.push('📄 ' + String(m.description).replace(/\r?\n/g, ' ').slice(0, 200));
+  }
+  if (siteUrl) lines.push('\n🔗 Ver catálogo: ' + siteUrl);
+  lines.push('\n¡Gracias por tu consulta! 🙌');
+  return lines.join('\n');
+}
+
+function openMaterialWhatsApp(m, brandObj, siteContact, siteUrl) {
+  const digits = String(
+    (siteContact && (siteContact.whatsapp || siteContact.phone)) || ''
+  ).replace(/\D/g, '');
+  if (!digits || digits.length < 8) {
+    alert('Antes de compartir por WhatsApp, configurá el número en el Panel → Sección Sitio → Contacto (campo WhatsApp o Teléfono).');
+    return;
+  }
+  const text = buildShareMaterialText(m, brandObj, siteUrl);
+  const url = 'https://wa.me/' + digits + '?text=' + encodeURIComponent(text);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 // ═══════════════════════════════════════════════════════════
 // MATERIALES
 // ═══════════════════════════════════════════════════════════
@@ -487,6 +588,7 @@ function MaterialesPage({ toast }) {
   const materials = useStoreVal('materials');
   const categories = useStoreVal('categories');
   const brands = useStoreVal('brands');
+  const site = useStoreVal('site');
   const [editing, setEditing] = useState(null);
   const [delTarget, setDelTarget] = useState(null);
   const [search, setSearch] = useState('');
@@ -495,6 +597,8 @@ function MaterialesPage({ toast }) {
 
   const categoryNames = buildCategoryList(categories, materials);
   const brandMap = Object.fromEntries((brands || []).map(b => [b.id, b]));
+  const siteUrl = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+  const contact = (site && site.contact) || {};
 
   const filtered = materials.filter((m) =>
     (catFilter === 'Todos' || m.category === catFilter) &&
@@ -522,6 +626,20 @@ function MaterialesPage({ toast }) {
     setDelTarget(null);
   };
 
+  const exportWA = () => {
+    try {
+      const csv = buildWhatsAppCSV(filtered.length > 0 ? filtered : materials, brands, siteUrl, 'ARS');
+      const d = new Date();
+      const stamp = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+      const filename = 'catalogo-whatsapp-' + stamp + '.csv';
+      downloadCSVFile(csv, filename);
+      toast('CSV generado: ' + filename + ' (' + (filtered.length || materials.length) + ' materiales)');
+    } catch (e) {
+      console.error(e);
+      toast('Error al generar CSV: ' + (e.message || e));
+    }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -529,6 +647,9 @@ function MaterialesPage({ toast }) {
         <div className="actions">
           <button className="btn btn-ghost btn-sm" onClick={() => location.hash = 'categorias'}>Categorías</button>
           <button className="btn btn-ghost btn-sm" onClick={() => location.hash = 'marcas'}>Marcas</button>
+          <button className="btn btn-ghost btn-sm" onClick={exportWA} title="Descarga un CSV compatible con Meta Catalog Manager para subir tu catálogo al perfil de WhatsApp Business.">
+            📥 CSV WhatsApp
+          </button>
           <button className="btn btn-primary btn-sm" onClick={() => setEditing({})}>+ Nuevo material</button>
         </div>
       </div>
@@ -591,6 +712,18 @@ function MaterialesPage({ toast }) {
                   <td>{m.stock}</td>
                   <td className="actions">
                     <div className="table-action-group">
+                    <button
+                      className="icon-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openMaterialWhatsApp(m, brandMap[m.brand] || null, contact, siteUrl);
+                      }}
+                      title="Compartir ficha por WhatsApp"
+                      style={{ color: '#25D366' }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.52 3.48A11.93 11.93 0 0 0 12.04 0C5.46 0 .1 5.35.1 11.94c0 2.1.55 4.14 1.6 5.95L0 24l6.22-1.64a11.9 11.9 0 0 0 5.82 1.51h.01c6.58 0 11.94-5.35 11.94-11.93 0-3.18-1.24-6.18-3.48-8.46zM12.04 21.7h-.01a9.8 9.8 0 0 1-5-1.38l-.36-.21-3.69.97.99-3.6-.23-.37a9.82 9.82 0 0 1-1.52-5.16c0-5.44 4.42-9.86 9.86-9.86 2.64 0 5.12 1.03 6.98 2.9a9.8 9.8 0 0 1 2.89 6.97c0 5.43-4.42 9.85-9.86 9.85zm5.42-7.4c-.3-.15-1.76-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.47-2.4-1.48-.89-.78-1.48-1.75-1.66-2.04-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.07-.15-.67-1.62-.92-2.21-.24-.58-.48-.5-.67-.51-.17 0-.37-.01-.57-.01-.2 0-.52.07-.8.37-.27.3-1.05 1.02-1.05 2.49s1.07 2.89 1.22 3.09c.15.2 2.1 3.2 5.08 4.48 2.99 1.28 2.99.85 3.54.8.54-.05 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"/></svg>
+                      <span>WA</span>
+                    </button>
                     <button
                       className="icon-btn"
                       onClick={(e) => {
