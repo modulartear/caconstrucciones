@@ -242,7 +242,8 @@ const ESCENAS = [
     tituloLista:'Pinturas y revestimientos',
     materiales:[],
     etiquetaTipo:{ color:'Pintura', textura:'Revestimiento' },
-    navZonas:[ { x0:1262, y0:90, x1:1536, y1:820, destino:1, dir:+1 } ]
+    navZonas:[ { x0:1262, y0:90, x1:1536, y1:820, destino:1, dir:+1 } ],
+    materialSurface: { leftTop:{x:790,y:116}, rightTop:{x:1450,y:62}, leftBottom:{x:790,y:690}, rightBottom:{x:1450,y:792}, repeatX:6 }
   },
   {
     id:'ranurada',
@@ -571,29 +572,41 @@ function drawImageCover(ctx, img, dx, dy, dw, dh, background = '#b8b7b0'){
 }
 
 function getAutoPhotoRepeatCount(mat) {
-  if (mat.tipo === 'panel') return 3;
   if (mat.tipo === 'color') return 1;
   if (mat.gen === 'ladrillo') return 5;
   if (mat.gen === 'stone') return 4;
   if (mat.gen === 'wood') return 4;
   if (mat.gen === 'cement') return 3;
-  return 3;
+  return mat.tipo === 'panel' ? 2 : 3;
 }
 
 function buildScaledPhotoPattern(img, esc, mat) {
-  const repeats = getAutoPhotoRepeatCount(mat);
-  if (repeats <= 1) return null;
+  if (mat.tipo === 'color') return null;
 
   const imgW = img.naturalWidth || img.width || esc.W;
   const imgH = img.naturalHeight || img.height || esc.H;
-  const tileW = Math.max(180, Math.round(esc.W / repeats));
-  const tileH = Math.max(180, Math.round(tileW * (imgH / imgW)));
+  const repeatCount = getAutoPhotoRepeatCount(mat);
+
+  // A panel material is a vertical module: fit its complete height to the wall,
+  // preserve its proportions, then repeat only across the wall width.
+  const tileH = Math.max(1, esc.H);
+  const naturalTileW = Math.max(1, Math.round(tileH * (imgW / imgH)));
+  const tileW = mat.tipo === 'panel'
+    ? naturalTileW
+    : Math.max(180, Math.round(esc.W / repeatCount));
+  const tileCanvasH = mat.tipo === 'panel'
+    ? tileH
+    : Math.max(180, Math.round(tileW * (imgH / imgW)));
 
   const tile = document.createElement('canvas');
   tile.width = tileW;
-  tile.height = tileH;
+  tile.height = tileCanvasH;
   const tileCtx = tile.getContext('2d');
-  drawImageCover(tileCtx, img, 0, 0, tileW, tileH, mat.hex || '#b8b7b0');
+  if (mat.tipo === 'panel') {
+    drawImageContain(tileCtx, img, 0, 0, tileW, tileCanvasH, 0, mat.hex || '#b8b7b0');
+  } else {
+    drawImageCover(tileCtx, img, 0, 0, tileW, tileCanvasH, mat.hex || '#b8b7b0');
+  }
   return tile;
 }
 
@@ -656,10 +669,52 @@ function generarTextura(gen, baseHex){
   return t;
 }
 
+function renderPhotoOnWall(esc, image, mat, outputContext){
+  const surface = esc.materialSurface;
+  if (!surface) return false;
+
+  const sourceWidth = image.naturalWidth || image.width;
+  const sourceHeight = image.naturalHeight || image.height;
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = sourceWidth;
+  sourceCanvas.height = sourceHeight;
+  const sourceContext = sourceCanvas.getContext('2d', { willReadFrequently:true });
+  sourceContext.drawImage(image, 0, 0, sourceWidth, sourceHeight);
+  const source = sourceContext.getImageData(0, 0, sourceWidth, sourceHeight).data;
+  const repeatX = Math.max(1, surface.repeatX || (mat.tipo === 'panel' ? 6 : 1));
+  const wall = outputContext.createImageData(esc.W, esc.H);
+
+  const lerp = (a, b, amount) => a + (b - a) * amount;
+  const leftEdge = Math.min(surface.leftTop.x, surface.leftBottom.x);
+  const rightEdge = Math.max(surface.rightTop.x, surface.rightBottom.x);
+  for (let y = 0; y < esc.H; y += 1) {
+    for (let x = Math.floor(leftEdge); x <= Math.ceil(rightEdge); x += 1) {
+      const horizontalRatio = (x - leftEdge) / Math.max(1, rightEdge - leftEdge);
+      const top = lerp(surface.leftTop.y, surface.rightTop.y, horizontalRatio);
+      const bottom = lerp(surface.leftBottom.y, surface.rightBottom.y, horizontalRatio);
+      const verticalRatio = (y - top) / Math.max(1, bottom - top);
+      if (verticalRatio < 0 || verticalRatio > 1) continue;
+
+      const sourceX = Math.min(sourceWidth - 1, Math.floor(((horizontalRatio * repeatX) % 1) * sourceWidth));
+      const sourceY = Math.min(sourceHeight - 1, Math.floor(verticalRatio * sourceHeight));
+      const sourcePixel = (sourceY * sourceWidth + sourceX) * 4;
+      const outputPixel = (y * esc.W + x) * 4;
+      wall.data[outputPixel] = source[sourcePixel];
+      wall.data[outputPixel + 1] = source[sourcePixel + 1];
+      wall.data[outputPixel + 2] = source[sourcePixel + 2];
+      wall.data[outputPixel + 3] = 255;
+    }
+  }
+
+  outputContext.putImageData(wall, 0, 0);
+  return true;
+}
+
 function lienzoMaterial(esc, mat){
   const t = document.createElement('canvas'); t.width = esc.W; t.height = esc.H;
   const c = t.getContext('2d');
   if (mat.photoImage) {
+    if (renderPhotoOnWall(esc, mat.photoImage, mat, c)) return t;
     const patternTile = buildScaledPhotoPattern(mat.photoImage, esc, mat);
     if (patternTile) {
       const pattern = c.createPattern(patternTile, 'repeat');
