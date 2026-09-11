@@ -310,7 +310,7 @@ function guessGenFromMaterial(material) {
 
 function buildSceneMaterials(sceneId, materials) {
   const normalized = (materials || [])
-    .filter((m) => m && (m.label || m.name) && (m.swatch || m.color || m.swatch === '#000000' || m.color === '#000000'));
+    .filter((m) => m && (m.label || m.name) && (m.photo || m.swatch || m.color || m.swatch === '#000000' || m.color === '#000000'));
 
   const filtered = normalized.filter((m) => {
     const category = String(m.category || '').toLowerCase();
@@ -571,11 +571,11 @@ function drawImageCover(ctx, img, dx, dy, dw, dh, background = '#b8b7b0'){
 }
 
 function getAutoPhotoRepeatCount(mat) {
-  if (mat.tipo === 'panel') return 1;
+  if (mat.tipo === 'panel') return 3;
   if (mat.tipo === 'color') return 1;
   if (mat.gen === 'ladrillo') return 5;
   if (mat.gen === 'stone') return 4;
-  if (mat.gen === 'wood') return 3;
+  if (mat.gen === 'wood') return 4;
   if (mat.gen === 'cement') return 3;
   return 3;
 }
@@ -689,10 +689,11 @@ function aplicarMaterial(mat){
   for (let i = 0; i < N; i++){
     const a = esc.maskAlpha[i];
     if (a === 0) continue;
-    const L = esc.lum[i], p = i*4;
-    out[p]   = esc.baseData[p]  *(1-a) + Math.min(255, mdata[p]  *L)*a;
-    out[p+1] = esc.baseData[p+1]*(1-a) + Math.min(255, mdata[p+1]*L)*a;
-    out[p+2] = esc.baseData[p+2]*(1-a) + Math.min(255, mdata[p+2]*L)*a;
+    const L = Math.max(0.72, Math.min(1.28, esc.lum[i])), p = i*4;
+    const shade = 0.78 + L * 0.32;
+    out[p]   = esc.baseData[p]  *(1-a) + Math.min(255, mdata[p]  *shade)*a;
+    out[p+1] = esc.baseData[p+1]*(1-a) + Math.min(255, mdata[p+1]*shade)*a;
+    out[p+2] = esc.baseData[p+2]*(1-a) + Math.min(255, mdata[p+2]*shade)*a;
   }
   esc.renderActual = new ImageData(out, esc.W, esc.H);
   pintarEscena(esc, caras[caraActiva]);
