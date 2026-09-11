@@ -371,8 +371,18 @@ function Obras() {
 function Materiales() {
   const materials = useStore('materials');
   const [cat, setCat] = useState('Todos');
+  const [selectedMaterial, setSelectedMaterial] = useState(null);
   const cats = useMemo(() => ['Todos', ...new Set(materials.map((m) => m.category))], [materials]);
   const filtered = cat === 'Todos' ? materials : materials.filter((m) => m.category === cat);
+
+  useEffect(() => {
+    if (!selectedMaterial) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setSelectedMaterial(null);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [selectedMaterial]);
 
   return (
     <section id="materiales" className="section-dark">
@@ -394,20 +404,58 @@ function Materiales() {
         <Reveal className="stagger">
           <div className="mat-grid">
             {filtered.map((m) => (
-              <div key={m.id} className="mat-card" onClick={() => document.getElementById('tester').scrollIntoView({ behavior: 'smooth' })}>
+              <button
+                key={m.id}
+                type="button"
+                className="mat-card"
+                onClick={() => setSelectedMaterial(m)}
+                aria-label={`Ver detalles de ${m.name}`}
+              >
                 <div className="mat-swatch">
-                  {m.photo ? <img src={m.photo} alt={m.name} /> : <ProceduralSwatch material={m} size={300} />}
+                  {m.photo ? <img src={m.photo} alt="" /> : <ProceduralSwatch material={m} size={300} />}
                 </div>
                 <div className="mat-info">
                   <div className="cat">{m.category}</div>
                   <div className="name">{m.name}</div>
-                  <div className="price"><b>${m.price.toLocaleString('es-AR')}</b> / {m.unit}</div>
+                  <div className="price"><b>${Number(m.price || 0).toLocaleString('es-AR')}</b> / {m.unit}</div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </Reveal>
       </div>
+      {selectedMaterial && (
+        <div className="modal-backdrop" onClick={() => setSelectedMaterial(null)}>
+          <article
+            className="modal lg material-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="material-detail-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" className="modal-close" onClick={() => setSelectedMaterial(null)} aria-label="Cerrar detalles">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div className="material-modal-grid">
+              <div className="material-modal-image">
+                {selectedMaterial.photo ? <img src={selectedMaterial.photo} alt={selectedMaterial.name} /> : <ProceduralSwatch material={selectedMaterial} size={600} />}
+              </div>
+              <div className="material-modal-content">
+                <div className="cat">{selectedMaterial.category}</div>
+                <h3 id="material-detail-title">{selectedMaterial.name}</h3>
+                {selectedMaterial.description && <p className="sub">{selectedMaterial.description}</p>}
+                <div className="material-detail-price"><b>${Number(selectedMaterial.price || 0).toLocaleString('es-AR')}</b><span>/ {selectedMaterial.unit}</span></div>
+                <div className="material-detail-list">
+                  {selectedMaterial.brand && <div><span>Marca</span><strong>{selectedMaterial.brand}</strong></div>}
+                  {selectedMaterial.stock !== undefined && <div><span>Disponibilidad</span><strong>{selectedMaterial.stock} {selectedMaterial.unit}</strong></div>}
+                  {selectedMaterial.supplier && <div><span>Proveedor</span><strong>{selectedMaterial.supplier}</strong></div>}
+                </div>
+                <a className="btn btn-primary material-modal-cta" href="#contacto" onClick={() => setSelectedMaterial(null)}>Consultar por este material</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      )}
     </section>
   );
 }
