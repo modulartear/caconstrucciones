@@ -370,6 +370,7 @@ function Obras() {
 // ───────────────────────── Materiales catálogo ─────────────────────────
 function Materiales() {
   const materials = useStore('materials');
+  const site = useStore('site');
   const [cat, setCat] = useState('Todos');
   const [selectedMaterial, setSelectedMaterial] = useState(null);
   const cats = useMemo(() => ['Todos', ...new Set(materials.map((m) => m.category))], [materials]);
@@ -449,9 +450,23 @@ function Materiales() {
                   {selectedMaterial.brand && <div><span>Marca</span><strong>{selectedMaterial.brand}</strong></div>}
                   {selectedMaterial.stock !== undefined && <div><span>Disponibilidad</span><strong>{selectedMaterial.stock} {selectedMaterial.unit}</strong></div>}
                   {selectedMaterial.supplier && <div><span>Proveedor</span><strong>{selectedMaterial.supplier}</strong></div>}
-                </div>
-                <a className="btn btn-primary material-modal-cta" href="#contacto" onClick={() => setSelectedMaterial(null)}>Consultar por este material</a>
-              </div>
+  </div>
+  <a
+  className="btn btn-primary material-modal-cta"
+  href={`https://wa.me/${String(site?.contact?.whatsapp || site?.contact?.phone || '').replace(/\D/g, '')}?text=${encodeURIComponent([
+  'Hola, quiero consultar por este material:',
+  `Material: ${selectedMaterial.name}`,
+  `Categoría: ${selectedMaterial.category || 'Sin categoría'}`,
+  `Precio: $${Number(selectedMaterial.price || 0).toLocaleString('es-AR')} / ${selectedMaterial.unit || 'unidad'}`,
+  selectedMaterial.brand ? `Marca: ${selectedMaterial.brand}` : null,
+  selectedMaterial.photo ? `Imagen del material: ${selectedMaterial.photo}` : null,
+  '¿Podrían brindarme más información y disponibilidad?'
+  ].filter(Boolean).join('\\n'))}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  onClick={() => setSelectedMaterial(null)}
+  >Consultar por este material</a>
+  </div>
             </div>
           </article>
         </div>
@@ -665,7 +680,7 @@ function Contacto({ onSubmitToast }) {
   );
 }
 
-// ───────────────────────── Footer ─────────────────────────
+// ───��───────────────────── Footer ─────────────────────────
 function Footer({ site }) {
   const fullLogo = site.logo_full || site.logoFull || null;
   const logoSrc = fullLogo || site.logo || 'assets/ca-logo.png';
