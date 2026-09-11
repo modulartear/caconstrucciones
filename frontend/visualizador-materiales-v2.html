@@ -571,29 +571,41 @@ function drawImageCover(ctx, img, dx, dy, dw, dh, background = '#b8b7b0'){
 }
 
 function getAutoPhotoRepeatCount(mat) {
-  if (mat.tipo === 'panel') return 3;
   if (mat.tipo === 'color') return 1;
   if (mat.gen === 'ladrillo') return 5;
   if (mat.gen === 'stone') return 4;
   if (mat.gen === 'wood') return 4;
   if (mat.gen === 'cement') return 3;
-  return 3;
+  return mat.tipo === 'panel' ? 2 : 3;
 }
 
 function buildScaledPhotoPattern(img, esc, mat) {
-  const repeats = getAutoPhotoRepeatCount(mat);
-  if (repeats <= 1) return null;
+  if (mat.tipo === 'color') return null;
 
   const imgW = img.naturalWidth || img.width || esc.W;
   const imgH = img.naturalHeight || img.height || esc.H;
-  const tileW = Math.max(180, Math.round(esc.W / repeats));
-  const tileH = Math.max(180, Math.round(tileW * (imgH / imgW)));
+  const repeatCount = getAutoPhotoRepeatCount(mat);
+
+  // A panel material is a vertical module: fit its complete height to the wall,
+  // preserve its proportions, then repeat only across the wall width.
+  const tileH = Math.max(1, esc.H);
+  const naturalTileW = Math.max(1, Math.round(tileH * (imgW / imgH)));
+  const tileW = mat.tipo === 'panel'
+    ? naturalTileW
+    : Math.max(180, Math.round(esc.W / repeatCount));
+  const tileCanvasH = mat.tipo === 'panel'
+    ? tileH
+    : Math.max(180, Math.round(tileW * (imgH / imgW)));
 
   const tile = document.createElement('canvas');
   tile.width = tileW;
-  tile.height = tileH;
+  tile.height = tileCanvasH;
   const tileCtx = tile.getContext('2d');
-  drawImageCover(tileCtx, img, 0, 0, tileW, tileH, mat.hex || '#b8b7b0');
+  if (mat.tipo === 'panel') {
+    drawImageContain(tileCtx, img, 0, 0, tileW, tileCanvasH, 0, mat.hex || '#b8b7b0');
+  } else {
+    drawImageCover(tileCtx, img, 0, 0, tileW, tileCanvasH, mat.hex || '#b8b7b0');
+  }
   return tile;
 }
 
