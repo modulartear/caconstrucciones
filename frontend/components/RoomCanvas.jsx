@@ -1,92 +1,105 @@
 import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
-import dlt from 'dltjs';
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+function getMaskValue(maskData, index, total) {
+  if (!maskData || index >= maskData.length) return 1;
+  const value = Number(maskData[index]);
+  if (!Number.isFinite(value)) return 0;
+  const normalized = value > 1 ? value / 255 : value;
+  return normalized > 0.35 ? Math.min(1, normalized) : 0;
+}
 
 export default function RoomCanvas({ bgImageSrc, materialImageSrc, maskData }) {
-  const mountRef = useRef(null);
+  const canvasRef = useRef(null);
 
   useEffect(() => {
-    if (!bgImageSrc ||!materialImageSrc ||!mountRef.current) return;
+    if (!bgImageSrc || !materialImageSrc || !canvasRef.current) return undefined;
 
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
+    let cancelled = false;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d', { willReadFrequently: true });
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
-    
-    // Limpiar renderizados previos
-    mountRef.current.innerHTML = ''; 
-    mountRef.current.appendChild(renderer.domElement);
+    const render = async () => {
+      const [background, material] = await Promise.all([
+        loadImage(bgImageSrc),
+        loadImage(materialImageSrc),
+      ]);
+      if (cancelled) return;
 
-    const loader = new THREE.TextureLoader();
-    const tBackground = loader.load(bgImageSrc);
-    const tMaterial = loader.load(materialImageSrc);
-    tMaterial.wrapS = THREE.RepeatWrapping;
-    tMaterial.wrapT = THREE.RepeatWrapping;
+      const maxWidth = 1100;
+      const scale = Math.min(1, maxWidth / background.naturalWidth);
+      const width = Math.max(1, Math.round(background.naturalWidth * scale));
+      const height = Math.max(1, Math.round(background.naturalHeight * scale));
+      canvas.width = width;
+      canvas.height = height;
 
-    // Cálculo de la Matriz de Homografía para la perspectiva 
-    // p0: Cuadrado perfecto de la textura
-    const p0 = [, , , [1, 1]]; 
-    // p1: Fuga de perspectiva del suelo en la habitación
-    const p1 = [[0.2, 0.2], [0.05, 0.9], [0.8, 0.2], [0.95, 0.9]]; 
-    const M = dlt.dlt2d(p0, p1);
+      context.clearRect(0, 0, width, height);
+      context.drawImage(background, 0, 0, width, height);
 
-    // Shader programable en WebGL
-    const shaderMaterial = new THREE.ShaderMaterial({
-      uniforms: {
-        tMaterial: { value: tMaterial },
-        tBackground: { value: tBackground },
-        transformMat: { 
-          value: new THREE.Matrix3(
-            M, M[1], M[2], 
-            M[1], M[1][1], M[1][2], 
-            M[2], M[2][1], M[2][2]
-          ) 
-        }
-      },
-      vertexShader: `
-        varying vec2 vUv;
-        void main() {
-          vUv = uv;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-        }
-      `,
-      fragmentShader: `
-        uniform sampler2D tMaterial;
-        uniform sampler2D tBackground;
-        uniform mat3 transformMat;
-        varying vec2 vUv;
+      const backgroundPixels = context.getImageData(0, 0, width, height);
+      const materialCanvas = document.createElement('canvas');
+      materialCanvas.width = width;
+      materialCanvas.height = height;
+      const materialContext = materialCanvas.getContext('2d');
 
-        vec2 warpPoint(mat3 transformMat, vec2 p) {
-          vec3 result = transformMat * vec3(p, 1.0);
-          return vec2(result.x / result.z, result.y / result.z);
-        }
+      // Repite la textura de forma proporcional: evita estirarla y conserva vetas/paneles.
+      const tileWidth = Math.max(80, Math.round(width * 0.22));
+      const tileHeight = Math.max(80, Math.round(tileWidth * (material.naturalHeight / material.naturalWidth)));
+      const pattern = materialContext.createPattern(material, 'repeat');
+      pattern.setTransform(new DOMMatrix().scale(tileWidth / material.naturalWidth, tileHeight / material.naturalHeight));
+      materialContext.fillStyle = pattern;
+      materialContext.fillRect(0, 0, width, height);
 
-        void main() {
-          vec2 warpedUV = warpPoint(transformMat, vUv);
-          vec4 matColor = texture2D(tMaterial, fract(warpedUV * 4.0)); // 4.0 es la escala de repetición
-          
-          vec4 bgColor = texture2D(tBackground, vUv);
-          float shadowMap = (bgColor.r + bgColor.g + bgColor.b) / 3.0;
+      const materialPixels = materialContext.getImageData(0, 0, width, height);
+      const output = context.createImageData(width, height);
+      const totalPixels = width * height;
+      const maskScale = maskData?.length ? Math.sqrt(maskData.length / totalPixels) : 1;
 
-          // Modo Multiply para mezclar las sombras reales con la textura nueva
-          vec3 finalBlend = matColor.rgb * (shadowMap * 1.5);
-          
-          gl_FragColor = vec4(finalBlend, 1.0);
-        }
-      `
-    });
+      for (let index = 0; index < totalPixels; index += 1) {
+        const pixel = index * 4;
+        const x = index % width;
+        const y = Math.floor(index / width);
+        const maskX = Math.min(width - 1, Math.floor(x * maskScale));
+        const maskY = Math.min(height - 1, Math.floor(y * maskScale));
+        const maskIndex = maskY * width + maskX;
+        const coverage = getMaskValue(maskData, maskIndex, totalPixels);
 
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), shaderMaterial);
-    scene.add(plane);
-    renderer.render(scene, camera);
+        const originalR = backgroundPixels.data[pixel];
+        const originalG = backgroundPixels.data[pixel + 1];
+        const originalB = backgroundPixels.data[pixel + 2];
+        const luminance = (originalR * 0.2126 + originalG * 0.7152 + originalB * 0.0722) / 255;
+        const light = 0.62 + luminance * 0.68;
+        const materialR = Math.min(255, materialPixels.data[pixel] * light);
+        const materialG = Math.min(255, materialPixels.data[pixel + 1] * light);
+        const materialB = Math.min(255, materialPixels.data[pixel + 2] * light);
 
-    return () => {
-      renderer.dispose();
+        output.data[pixel] = originalR * (1 - coverage) + materialR * coverage;
+        output.data[pixel + 1] = originalG * (1 - coverage) + materialG * coverage;
+        output.data[pixel + 2] = originalB * (1 - coverage) + materialB * coverage;
+        output.data[pixel + 3] = 255;
+      }
+
+      context.putImageData(output, 0, 0);
     };
-  },);
 
-  return <div ref={mountRef} style={{ width: '100%', height: '500px', borderRadius: '8px', overflow: 'hidden' }} />;
+    render().catch((error) => console.error('[v0] Error al renderizar material:', error));
+    return () => {
+      cancelled = true;
+    };
+  }, [bgImageSrc, materialImageSrc, maskData]);
+
+  return (
+    <div style={{ width: '100%', maxWidth: 1100, borderRadius: 8, overflow: 'hidden', lineHeight: 0 }}>
+      <canvas ref={canvasRef} style={{ display: 'block', width: '100%', height: 'auto' }} aria-label="Vista previa del material aplicado" />
+    </div>
+  );
 }
