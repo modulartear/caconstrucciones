@@ -244,6 +244,32 @@ async function compressImage(file, maxWidth = 1200, maxHeight = 1200, quality = 
   });
 }
 
+async function normalizeMaterialImage(file) {
+  const source = await readFileAsDataUrl(file);
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const width = 640;
+      const height = 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      const scale = Math.max(width / img.width, height / img.height);
+      const drawWidth = img.width * scale;
+      const drawHeight = img.height * scale;
+      const offsetX = (width - drawWidth) / 2;
+      const offsetY = (height - drawHeight) / 2;
+      ctx.fillStyle = '#b8b7b0';
+      ctx.fillRect(0, 0, width, height);
+      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = reject;
+    img.src = source;
+  });
+}
+
 async function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -270,7 +296,7 @@ async function fileToPngDataUrl(file) {
   });
 }
 
-function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2 }) {
+function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2, normalizeForMaterial = false }) {
   const [err, setErr] = useState(null);
   const onFile = async (file) => {
     if (!file) return;
@@ -282,7 +308,9 @@ function PhotoInput({ value, onChange, hint = 'Subí una foto', maxSizeMB = 2 })
     }
     
     try {
-      const compressed = await compressImage(file);
+      const compressed = normalizeForMaterial
+        ? await normalizeMaterialImage(file)
+        : await compressImage(file);
       onChange(compressed);
     } catch (e) {
       setErr('Error al procesar la imagen');
@@ -860,7 +888,7 @@ function MaterialForm({ initial, onClose, onSave }) {
         </div>
         <div className="full">
           <label>Foto real (opcional) — anula la textura procedural</label>
-          <PhotoInput value={m.photo} onChange={(v) => setM({ ...m, photo: v })} hint="Arrastrá una foto del material o hacé click" />
+          <PhotoInput value={m.photo} onChange={(v) => setM({ ...m, photo: v })} hint="Arrastrá una foto del material o hacé click" normalizeForMaterial />
         </div>
         <div className="full">
           <label>Preview</label>
